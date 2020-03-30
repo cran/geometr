@@ -8,26 +8,28 @@
 \alias{gs_hexagon}
 \title{Create a polygon \code{geom}}
 \usage{
-gs_polygon(anchor = NULL, window = NULL, features = 1,
-  vertices = NULL, sketch = NULL, regular = FALSE, ...)
+gs_polygon(
+  anchor = NULL,
+  window = NULL,
+  features = 1,
+  vertices = NULL,
+  sketch = NULL,
+  regular = FALSE,
+  ...
+)
 
-gs_triangle(anchor = NULL, window = NULL, sketch = NULL,
-  features = 1, ...)
+gs_triangle(anchor = NULL, window = NULL, sketch = NULL, features = 1, ...)
 
-gs_square(anchor = NULL, window = NULL, sketch = NULL,
-  features = 1, ...)
+gs_square(anchor = NULL, window = NULL, sketch = NULL, features = 1, ...)
 
-gs_rectangle(anchor = NULL, window = NULL, sketch = NULL,
-  features = 1, ...)
+gs_rectangle(anchor = NULL, window = NULL, sketch = NULL, features = 1, ...)
 
-gs_hexagon(anchor = NULL, window = NULL, sketch = NULL,
-  features = 1, ...)
+gs_hexagon(anchor = NULL, window = NULL, sketch = NULL, features = 1, ...)
 }
 \arguments{
 \item{anchor}{[\code{geom(1)}|\code{data.frame(1)}]\cr Object to derive the
 \code{geom} from. It must include column names \code{x}, \code{y} and
-optionally a custom \code{fid}. To set further attributes, use
-\code{\link{setTable}}.}
+optionally a custom \code{fid}.}
 
 \item{window}{[\code{data.frame(1)}]\cr in case the reference window deviates
 from the bounding box of \code{anchor} (minimum and maximum values),
@@ -39,14 +41,15 @@ specify this here.}
 will be recycled if it does not have as many elements as specified in
 \code{features}.}
 
-\item{sketch}{[\code{RasterLayer(1)}|\code{matrix(1)}]\cr Gridded object that
-serves as template to sketch polygons.}
+\item{sketch}{[\code{raster(1)}]\cr raster object that serves as template to
+sketch polygons.}
 
 \item{regular}{[\code{logical(1)}]\cr should the polygon be regular, i.e.
 point symmetric (\code{TRUE}) or should the vertices be selected as
 provided by \code{anchor} (\code{FALSE}, default)?}
 
-\item{...}{[various]\cr additional arguments; see Details.}
+\item{...}{[various]\cr graphical parameters to \code{\link{gt_locate}}, in
+case points are sketched; see \code{\link[grid]{gpar}}}
 }
 \value{
 An invisible \code{geom}.
@@ -68,10 +71,6 @@ The arguments \code{anchor} and \code{sketch} indicate how the line
   from all vertices in \code{anchor}, \item if \code{regular = TRUE}, only
   the first two vertices are considered, as center and indicating the
   distance to the (outer) radius.}
-
-  Possible additional arguments are: \itemize{ \item verbose = TRUE/FALSE
-  \item graphical parameters to \code{\link{gt_locate}}, in case points are
-  sketched; see \code{\link[grid]{gpar}}}
 }
 \section{Functions}{
 \itemize{
@@ -105,9 +104,6 @@ gs_polygon(anchor = coords, vertices = 6, window = window,
            regular = TRUE) \%>\%
   visualise(linecol = "green")
 
-# if a plot is already open, vertices are set relative to its' window
-visualise(geom = gs_triangle(anchor = coords), new = FALSE)
-
 # when a geom is used in 'anchor', its properties are passed on
 aGeom <- setWindow(x = aGeom, to = window)
 gs_polygon(anchor = aGeom) \%>\%
@@ -121,7 +117,9 @@ gs_hexagon(sketch = gtRasters$continuous) \%>\%
 }
 }
 \seealso{
-Other geometry shapes: \code{\link{gs_line}},
-  \code{\link{gs_point}}, \code{\link{gs_random}}
+Other geometry shapes: 
+\code{\link{gs_line}()},
+\code{\link{gs_point}()},
+\code{\link{gs_random}()}
 }
 \concept{geometry shapes}

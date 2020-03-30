@@ -4,9 +4,18 @@
 \alias{setTheme}
 \title{Create a new theme}
 \usage{
-setTheme(from = NULL, title = NULL, box = NULL, xAxis = NULL,
-  yAxis = NULL, grid = NULL, legend = NULL, vector = NULL,
-  raster = NULL)
+setTheme(
+  from = NULL,
+  title = NULL,
+  box = NULL,
+  xAxis = NULL,
+  yAxis = NULL,
+  grid = NULL,
+  legend = NULL,
+  scale = NULL,
+  vector = NULL,
+  raster = NULL
+)
 }
 \arguments{
 \item{from}{[\code{gtTheme}]\cr an gtTheme object.}
@@ -15,7 +24,7 @@ setTheme(from = NULL, title = NULL, box = NULL, xAxis = NULL,
 \code{fontsize} and \code{colour} of the title.}
 
 \item{box}{[\code{named list(.)}]\cr \code{plot = TRUE/FALSE},
-\code{linewidth}, \code{linetype} and \code{colour} of the bounding box
+\code{linewidth}, \code{linetype} and \code{linecol} of the bounding box
 (not supported recently).}
 
 \item{xAxis}{[\code{named list(.)}]\cr \code{plot = TRUE/FALSE}, number of
@@ -45,14 +54,16 @@ grid and whether or not to plot the \code{minor = TRUE/FALSE} grid.}
 labels, \cr\cr box [\code{named list(.)}]\cr \code{plot = TRUE/FALSE},
 \code{linetype}, \code{linewidth} and \code{colour} of the legend box.}
 
-\item{vector}{[\code{named list(.)}]\cr \code{linecol}, \code{fillcol},
-\code{linetype}, \code{linewidth}, \code{pointsize} and \code{pointsymbol}
-of a vector object, \cr\cr scale [\code{named list(.)}]\cr \code{x =
-'someParameter'} and \code{to = 'someAttribute'} to which to scale
-'someParameter' to.}
+\item{scale}{[\code{named list(.)}]\cr \code{param = 'someParameter'} and
+\code{to = 'someAttribute'} to which to scale 'someParameter' to. Whether
+or not to use the values' \code{identity}, the value \code{range} that
+shall be represented by the scale and the number of \code{bins}.}
 
-\item{raster}{[ \code{named list(.)}]\cr \code{scale = 'someAttribute'} and
-at least two \code{colours} to which to scale 'someAttribute' to.}
+\item{vector}{[\code{named list(.)}]\cr \code{linecol}, \code{fillcol},
+\code{missingcol}, \code{linetype}, \code{linewidth}, \code{pointsize} and
+\code{pointsymbol} of a vector object.}
+
+\item{raster}{[ \code{named list(.)}]\cr \code{fillcol} of a raster object.}
 }
 \description{
 Assign parameters in a gtTheme to create a new theme.

@@ -1,9 +1,20 @@
-#' Get the table of coordinates of a spatial object.
+#' Get the table of point attributes
 #'
-#' @param x the object from which to extract the coordinates
-#' @return A table of the coordinates \code{x} is made up of.
+#' Get tabular information of the attributes of points (incl. coordinates).
+#' @param x the object from which to derive the attribute table.
+#' @param ... subset based on logical predicates defined in terms of the
+#'   columns in \code{x} or a vector of booleans. Multiple conditions are
+#'   combined with \code{&}. Only rows where the condition evaluates to TRUE are kept.
+#' @return A table of the point attributes of \code{x} or an object where the
+#'   point table has been subsetted.
 #' @examples
-#' getPoints(gtGeoms$polygon)
+#' getPoints(x = gtGeoms$polygon)
+#'
+#' getPoints(x = gtGeoms$point)
+#'
+#' # for a raster object, the @point slot is extracted from its' compact storage
+#' gtGeoms$grid$continuous@point
+#' getPoints(x = gtGeoms$grid$continuous)
 #' @family getters
 #' @name getPoints
 #' @rdname getPoints
@@ -26,29 +37,66 @@ if(!isGeneric("getPoints")){
 #' @export
 setMethod(f = "getPoints",
           signature = "ANY",
-          definition = function(x){
+          definition = function(x, ...){
             NULL
           }
 )
 
 # geom ----
 #' @rdname getPoints
-#' @examples
-#' getPoints(x = gtGeoms$point)
 #' @importFrom tibble as_tibble
 #' @export
 setMethod(f = "getPoints",
           signature = "geom",
-          definition = function(x){
-            as_tibble(x@point)
+          definition = function(x, ...){
+
+            theType <- getType(x = x)[2]
+
+            if(length(exprs(...)) > 0){
+              out <- x
+              subset <- enquos(...)
+              isLogical <- tryCatch(is.logical(eval_tidy(expr = subset[[1]])), error = function(e) FALSE)
+              thePoints <- getPoints(x = x)
+              theFeatures <- getFeatures(x = x)
+              theGroups <- getGroups(x = x)
+              if(isLogical){
+                matches <- eval_tidy(expr = subset[[1]])
+              } else {
+                subset <- exprs(...)
+                matches <- eval(parse(text = subset), envir = thePoints)
+              }
+              thePoints <- thePoints[matches,]
+              theFeatures <- theFeatures[theFeatures$fid %in% thePoints$fid,]
+              theGroups <- theGroups[theGroups$gid %in% theFeatures$gid,]
+
+              out <- new(Class = "geom",
+                         type = theType,
+                         point = thePoints,
+                         feature = list(geometry = theFeatures),
+                         group = list(geometry = theGroups),
+                         window = getWindow(x = x),
+                         scale = "absolute",
+                         crs = getCRS(x = x),
+                         history = getHistory(x = x))
+            } else {
+              if(theType == "grid"){
+                # rebuild points
+                xGrid <- seq(from = x@point$x[1], length.out = x@point$x[2], by = x@point$x[3]) + 0.5
+                yGrid <- seq(from = x@point$y[1], length.out = x@point$y[2], by = x@point$y[3]) + 0.5
+                out <- tibble(fid = seq(1:(length(xGrid)*length(yGrid))),
+                              x = rep(xGrid, times = length(yGrid)),
+                              y = rep(yGrid, each = length(xGrid)))
+              } else {
+                out <- x@point
+              }
+            }
+
+            return(out)
           }
 )
 
 # Spatial ----
 #' @rdname getPoints
-#' @examples
-#'
-#' getPoints(x = gtSP$SpatialPoints)
 #' @importFrom methods as
 #' @importFrom tibble tibble as_tibble
 #' @export
@@ -126,9 +174,6 @@ setMethod(f = "getPoints",
 
 # sf ----
 #' @rdname getPoints
-#' @examples
-#'
-#' getPoints(x = gtSF$multilinestring)
 #' @importFrom tibble as_tibble
 #' @importFrom sf st_geometry_type st_coordinates
 #' @export
@@ -160,15 +205,10 @@ setMethod(f = "getPoints",
 
               } else if(sourceClass %in% c("MULTILINESTRING")){
 
-                vids <- lapply(unique(theCoords[,4]), function(i){
-                  temp <- theCoords[which(theCoords[,4] == i),]
-
-                  lapply(unique(temp[,3]), function(j){
-                    seq_along(which(temp[,3] == j))
-                  })
-                })
-                vids <- unlist(vids, recursive = FALSE)
-                fids <- rep(1:length(vids), lengths(vids))
+                fact <- 10**nchar(max(theCoords[,3]))
+                toSeq <- theCoords[,4]*fact + theCoords[,3]
+                toSeq <- rle(toSeq)
+                fids <- rep(seq_along(toSeq$values), toSeq$lengths)
 
                 theCoords <- tibble(x = theCoords[,1],
                                     y = theCoords[,2],
@@ -182,15 +222,10 @@ setMethod(f = "getPoints",
 
               } else if(sourceClass %in% c("MULTIPOLYGON")){
 
-                vids <- lapply(unique(theCoords[,5]), function(i){
-                  temp <- theCoords[which(theCoords[,5] == i),]
-
-                  lapply(unique(temp[,4]), function(j){
-                    seq_along(which(temp[,4] == j))
-                  })
-                })
-                vids <- unlist(vids, recursive = FALSE)
-                fids <- rep(1:length(vids), lengths(vids))
+                fact <- 10**nchar(max(theCoords[,4]))
+                toSeq <- theCoords[,5]*fact + theCoords[,4]
+                toSeq <- rle(toSeq)
+                fids <- rep(seq_along(toSeq$values), toSeq$lengths)
 
                 theCoords <- tibble(x = theCoords[,1],
                                     y = theCoords[,2],
@@ -208,16 +243,49 @@ setMethod(f = "getPoints",
 
 # ppp ----
 #' @rdname getPoints
-#' @examples
-#'
-#' getPoints(x = gtPPP)
 #' @export
 setMethod(f = "getPoints",
           signature = "ppp",
           definition = function(x){
-            bla <- x
-            tibble(x = bla$x,
-                   y = bla$y,
-                   fid = seq_along(bla$x))
+            temp <- x
+            tibble(x = temp$x,
+                   y = temp$y,
+                   fid = seq_along(temp$x))
+          }
+)
+
+# Raster ----
+#' @rdname getPoints
+#' @importFrom tibble tibble as_tibble
+#' @importFrom raster res
+#' @export
+setMethod(f = "getPoints",
+          signature = "Raster",
+          definition = function(x){
+
+            res <- res(x)
+            xGrid <- seq(from = x@extent@xmin, length.out = x@ncols, by = res[1]) + 0.5
+            yGrid <- seq(from = x@extent@ymin, length.out = x@nrows, by = res[2]) + 0.5
+            out <- tibble(x = rep(xGrid, times = length(yGrid)),
+                          y = rep(yGrid, each = length(xGrid)),
+                          fid = seq(1:(length(xGrid)*length(yGrid))))
+            return(out)
+          }
+)
+
+# matrix ----
+#' @rdname getPoints
+#' @export
+setMethod(f = "getPoints",
+          signature = "matrix",
+          definition = function(x){
+
+            xGrid <- seq(from = 0, length.out = ncol(x), by = 1) + 0.5
+            yGrid <- seq(from = 0, length.out = nrow(x), by = 1) + 0.5
+            out <- tibble(x = rep(xGrid, times = length(yGrid)),
+                          y = rep(yGrid, each = length(xGrid)),
+                          fid = seq(1:(length(xGrid)*length(yGrid))))
+            return(out)
+
           }
 )

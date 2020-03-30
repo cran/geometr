@@ -1,15 +1,27 @@
 #' Set the reference window of a spatial object.
 #'
 #' @param x the object for which to set a new reference window.
-#' @param to [\code{data.frame(1)}]\cr a datastructure that contains the minimum
-#'   and maximum values in x and y-dimension to which the reference window shall
-#'   be set.
+#' @param to any suitable datastructure that contains the minimum and maximum
+#'   values in x and y-dimension to which the reference window shall be set, see
+#'   Details.
 #' @details Possible datastructures are \itemize{ \item an object of class
 #'   \code{Extent}, \item an object of class \code{bbox}, \item a table with two
 #'   columns (named x and y) containing the minimum and maximum values for each
 #'   dimension.}
 #' @return The object \code{x} with an update reference window.
 #' @family setters
+#' @examples
+#' # create a polygon programmatically
+#' coords <- data.frame(x = c(40, 70, 70, 50),
+#'                      y = c(40, 40, 60, 70))
+#' (aGeom <- gs_polygon(anchor = coords))
+#' visualise(aGeom)
+#'
+#' window <- data.frame(x = c(0, 80),
+#'                      y = c(0, 80))
+#' (aGeom <- setWindow(x = aGeom, to = window))
+#'
+#' visualise(aGeom)
 #' @name setWindow
 #' @rdname setWindow
 NULL
@@ -32,24 +44,12 @@ if(!isGeneric("setWindow")){
 setMethod(f = "setWindow",
           signature = "ANY",
           definition = function(x){
-            stop("the class is not (yet) supported, or does not have a reference window.")
+            warning(paste0("I can't set a reference window to an object of class '", paste0(class(x), collapse = ", "), "'."))
           }
 )
 
 # geom ----
 #' @rdname setWindow
-#' @examples
-#' # create a polygon programmatically
-#' coords <- data.frame(x = c(40, 70, 70, 50),
-#'                      y = c(40, 40, 60, 70))
-#' (aGeom <- gs_polygon(anchor = coords))
-#' visualise(geom = aGeom)
-#'
-#' window <- data.frame(x = c(0, 80),
-#'                      y = c(0, 80))
-#' (aGeom <- setWindow(x = aGeom, to = window))
-#'
-#' visualise(geom = aGeom)
 #' @importFrom checkmate testSubset assert
 #' @importFrom tibble tibble
 #' @export

@@ -6,7 +6,6 @@
 #'   determine specific graphic parameters (see \code{\link{gpar}}) separately;
 #'   see \code{\link{setTheme}} for details.
 #' @return Depending on the provided geometry either a \code{\link{pointsGrob}},
-#'   \code{\link{polylineGrob}} or a \code{\link{pathGrob}}.
 #' @family spatial classes
 #' @name gc_grob
 #' @rdname gc_grob
@@ -31,6 +30,7 @@ if(!isGeneric("gc_grob")){
 #' @importFrom stats setNames
 #' @importFrom tibble as_tibble
 #' @importFrom checkmate assertNames assertSubset assertList
+#' @importFrom dplyr group_by mutate
 #' @importFrom grid gpar unit pointsGrob gList pathGrob polylineGrob clipGrob
 #' @export
 setMethod(f = "gc_grob",
@@ -41,8 +41,8 @@ setMethod(f = "gc_grob",
             displayArgs <- exprs(...)
             featureType <- getType(x = input)[2]
             thePoints <- getPoints(x = input)
-            theFeatures <- getTable(x = input, slot = "feature")
-            theGroups <- getTable(x = input, slot = "group")
+            theFeatures <- getFeatures(x = input)
+            theGroups <- getGroups(x = input)
 
             if(featureType == "point"){
               attr <- left_join(x = thePoints, y = theFeatures, by = "fid")
@@ -59,11 +59,12 @@ setMethod(f = "gc_grob",
 
             point <- getPoints(x = outGeom)
             params <- theme@vector
+            scale <- theme@scale
 
             # select only displayArgs that are part of the valid parameters.
             tempArgs <- displayArgs[names(displayArgs) %in% names(params)]
             if(length(tempArgs) == 0){
-              tempArgs <- setNames(list(params$scale$to), params$scale$x)
+              tempArgs <- setNames(list(scale$to), scale$param)
             }
             if(!any(names(tempArgs) == "fillcol")){
               tempArgs <- c(tempArgs, setNames(list(NA_character_), "fillcol"))
@@ -90,35 +91,35 @@ setMethod(f = "gc_grob",
               # the default scale$to parameter
               if(!is.na(as.character(thisArg))){
                 if(as.character(thisArg) %in% colnames(attr)){
-                  toEval <- thisArg
+                  toEval <- as.character(thisArg)
                   toRamp <- params[[which(names(params) %in% thisArgName)]]
                   makeWarning <- TRUE
-                } else{
-                  toEval <- as.symbol(params$scale$to)
+                } else {
+                  toEval <- as.symbol(scale$to)
                   toRamp <- thisArg
                   makeWarning <- FALSE
                 }
 
-                vals <- eval(parse(text = paste0(toEval)), envir = attr)
-                params$scale$x <- thisArgName
-                params$scale$to <- toEval
+                vals <- attr[[toEval]]
+                scale$to <- thisArgName
+                scale$to <- toEval
 
                 # figure out numeric representations of 'vals'
                 temp <- suppressWarnings(as.numeric(as.character(vals)))
                 if(!all(is.na(temp))){
                   valsNum <- temp
-                  uniqueValsNum <- unique(temp)
+                  uniqueValsNum <- sort(unique(temp[!is.na(temp)]))
                 } else {
                   valsNum <- as.numeric(as.factor(vals))
-                  uniqueValsNum <- as.numeric(as.factor(unique(vals)))
+                  uniqueValsNum <- sort(as.numeric(as.factor(unique(vals))))
                 }
 
                 # if the argument is a colour argument, construct a color ramp from two or more values
                 if(thisArgName %in% c("linecol", "fillcol")){
 
-                  # test whether 'toEval' is a colour
-                  if(!all(as.character(toRamp) %in% colors()) & !all(grepl(pattern = "\\#(.{6,8})", x = toRamp))){
-                    stop(paste0(toRamp, " was neither found as column in the object to plot, or does not represent valid colour(s)."))
+                  # test whether 'toRamp' is a colour
+                  if(!any(as.character(toRamp) %in% colors()) & !any(grepl(pattern = "\\#(.{6,8})", x = toRamp))){
+                    stop(paste0(toRamp, " was neither found as column in the object to plot, nor is it a valid colour."))
                   }
 
                   if(makeWarning){
@@ -129,10 +130,42 @@ setMethod(f = "gc_grob",
                     }
                   }
 
-                  uniqueColours <- colorRampPalette(colors = toRamp)(length(uniqueValsNum))
-                  breaks <- c(min(uniqueValsNum)-1, uniqueValsNum)
-                  valCuts <- cut(valsNum, breaks = breaks, include.lowest = FALSE)
-                  tempOut <- uniqueColours[valCuts]
+                  if(scale$identity){
+                    scale$bins <- NULL
+                  }
+
+                  if(is.null(scale$range)){
+                    if(is.null(scale$bins)){
+                      nColours <- length(uniqueValsNum)
+                      breaks <- c(min(uniqueValsNum, na.rm = T)-1, uniqueValsNum)
+                    } else {
+                      nColours <- scale$bins
+                      breaks <- seq(from = min(uniqueValsNum), to = max(uniqueValsNum), length.out = scale$bins+1)
+                    }
+                  } else {
+                    if(is.null(scale$bins)){
+                      nColours <- length(uniqueValsNum)
+                      breaks <- seq(from = scale$range[1], to = scale$range[2], length.out = length(uniqueValsNum)+1)
+                    } else {
+                      nColours <- scale$bins
+                      breaks <- seq(from = scale$range[1], to = scale$range[2], length.out = scale$bins+1)
+                    }
+                  }
+                  plotColours <- colorRampPalette(colors = toRamp)(nColours)
+
+                  if(scale$identity){
+                    if(length(unique(plotColours)) < length(unique(uniqueValsNum))){
+                      stop(paste0("the property '", thisArgName, "' (", paste0(toRamp, collapse = ", "), ") does not allow a palette of ", length(unique(uniqueValsNum)), " unique colours."))
+                    }
+                  } else {
+
+                  }
+
+                  valCuts <- cut(valsNum, breaks = breaks, include.lowest = FALSE, labels = FALSE)
+                  tempOut <- plotColours[valCuts]
+                  if(!is.null(theme@vector$missingcol)){
+                    tempOut[is.na(tempOut)] <- theme@vector$missingcol
+                  }
 
                 } else if(thisArgName %in% c("linewidth", "pointsize")){
 
@@ -161,7 +194,7 @@ setMethod(f = "gc_grob",
                     }
                   }
 
-                  uniquItems <- toRamp
+                  uniquItems <- rep(toRamp, times = length(uniqueValsNum))
                   breaks <- c(0, uniqueValsNum[order(uniqueValsNum)])
                   valCuts <- cut(valsNum, breaks = breaks, include.lowest = FALSE)
                   tempOut <- uniquItems[valCuts]
@@ -177,7 +210,6 @@ setMethod(f = "gc_grob",
 
             # process parameters that are default
             for(i in seq_along(defaultArgs)){
-              if(i == 1) next
 
               # determine value and name of the i-th display argument
               thisArg <- defaultArgs[[i]][[1]]
@@ -189,9 +221,9 @@ setMethod(f = "gc_grob",
 
             }
 
-            ids <- eval(parse(text = "fid"), envir = attr)
+            ids <- attr[["fid"]]
 
-            if(input@type %in% "point"){
+            if(featureType %in% "point"){
 
               out <- pointsGrob(x = unit(point$x, "npc"),
                                 y = unit(point$y, "npc"),
@@ -202,7 +234,7 @@ setMethod(f = "gc_grob",
                                   col = params$linecol,
                                   fill = params$fillcol))
 
-            } else if(input@type %in% "line"){
+            } else if(featureType %in% "line"){
 
               out <- polylineGrob(x = unit(point$x, "npc"),
                                   y = unit(point$y, "npc"),
@@ -212,45 +244,73 @@ setMethod(f = "gc_grob",
                                             lty = params$linetype,
                                             lwd = params$linewidth))
 
-            } else if(input@type %in% "polygon"){
+            } else if(featureType %in% "polygon"){
 
-              out <- NULL
-              for(i in seq_along(unique(attr$fid))){
+              # start_time <- Sys.time()
+              dups <- group_by(.data = point, fid, x, y)
+              dups <- mutate(.data = dups,
+                             is_dup = duplicated(x) & duplicated(y),
+                             is_odd = seq_along(fid) %% 2 == 0,
+                             dup = as.integer(is_dup & is_odd))
+              dups <- dups[["dup"]]
+              dups <- c(0, dups[-length(dups)])
+              vids <- 1 + cumsum(dups)
 
-                theID <- unique(attr$fid)[i]
-                tempIDs <- attr[attr$fid == theID, ]
-                tempCoords <- point[point$fid %in% tempIDs$fid, ]
+              out <- pathGrob(x = point$x,
+                              y = point$y,
+                              id = vids,
+                              pathId = point$fid,
+                              rule = "evenodd",
+                              name = ids,
+                              gp = gpar(
+                                col = params$linecol,
+                                fill = params$fillcol,
+                                lty = params$linetype,
+                                lwd = params$linewidth))
+              # end_time_1 <- Sys.time()
+              # duration_1 <- end_time_1 - start_time
 
-                # determine subpaths by searching for duplicates. Whenever there is a
-                # duplicate in the vertices, the next vertex is part of the next subpaths
-                dups <- as.numeric(duplicated(tempCoords[c("x", "y")]))
-                dups <- c(0, dups[-length(dups)])
-                tempCoords$vid <- 1 + cumsum(dups)
-                if(i == 1){
-                  out <- pathGrob(x = tempCoords$x,
-                                  y = tempCoords$y,
-                                  id = as.numeric(as.factor(tempCoords$vid)),
-                                  rule = "evenodd",
-                                  name = ids[i],
-                                  gp = gpar(
-                                    col = params$linecol[i],
-                                    fill = params$fillcol[i],
-                                    lty = params$linetype[i],
-                                    lwd = params$linewidth[i]))
-                } else{
-                  out <- gList(out,
-                               pathGrob(x = tempCoords$x,
-                                        y = tempCoords$y,
-                                        id = as.numeric(as.factor(tempCoords$vid)),
-                                        rule = "evenodd",
-                                        name = ids[i],
-                                        gp = gpar(
-                                          col = params$linecol[i],
-                                          fill = params$fillcol[i],
-                                          lty = params$linetype[i],
-                                          lwd = params$linewidth[i])))
-                }
-              }
+
+              # start_time <- Sys.time()
+              # theID <- unique(attr$fid)
+              # for(i in seq_along(unique(attr$fid))){
+              #
+              #   tempIDs <- attr[attr$fid == theID[i], ]
+              #   tempCoords <- point[point$fid %in% tempIDs$fid, ]
+              #
+              #   # determine subpaths by searching for duplicates. Whenever there is a
+              #   # duplicate in the vertices, the next vertex is part of the next subpaths
+              #   dups <- as.numeric(duplicated(tempCoords[c("x", "y")]))
+              #   dups <- c(0, dups[-length(dups)])
+              #   tempCoords$vid <- 1 + cumsum(dups)
+              #   if(i == 1){
+              #     out <- pathGrob(x = tempCoords$x,
+              #                     y = tempCoords$y,
+              #                     id = as.numeric(as.factor(tempCoords$vid)),
+              #                     rule = "evenodd",
+              #                     name = ids[i],
+              #                     gp = gpar(
+              #                       col = params$linecol[i],
+              #                       fill = params$fillcol[i],
+              #                       lty = params$linetype[i],
+              #                       lwd = params$linewidth[i]))
+              #   } else {
+              #     out <- gList(out,
+              #                  pathGrob(x = tempCoords$x,
+              #                           y = tempCoords$y,
+              #                           id = as.numeric(as.factor(tempCoords$vid)),
+              #                           rule = "evenodd",
+              #                           name = ids[i],
+              #                           gp = gpar(
+              #                             col = params$linecol[i],
+              #                             fill = params$fillcol[i],
+              #                             lty = params$linetype[i],
+              #                             lwd = params$linewidth[i])))
+              #   }
+              # }
+              # end_time_2 <- Sys.time()
+              # duration_2 <- end_time_2 - start_time
+
             }
 
             return(out)

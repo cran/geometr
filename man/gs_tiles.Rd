@@ -4,14 +4,18 @@
 \alias{gs_tiles}
 \title{Create a regular tiling \code{geom}}
 \usage{
-gs_tiles(anchor = NULL, width = NULL, pattern = "squared",
-  centroids = FALSE, ...)
+gs_tiles(
+  anchor = NULL,
+  width = NULL,
+  pattern = "squared",
+  centroids = FALSE,
+  ...
+)
 }
 \arguments{
 \item{anchor}{[\code{geom(1)}|\code{data.frame(1)}]\cr Object to derive the
 tiling \code{geom} from. It must include column names \code{x}, \code{y}
-and optionally a custom \code{fid}. To set further attributes, use
-\code{\link{setTable}}.}
+and optionally a custom \code{fid}.}
 
 \item{width}{[\code{numeric(1)}]\cr the width (which does not correspond to
 the height in case of \code{pattern = "hexagonal"}) of a tile.}
@@ -64,6 +68,7 @@ gs_tiles(anchor = aGeom, width = 8, pattern = "hexagonal") \%>\%
   visualise(., linecol = "deeppink", new = FALSE)
 }
 \seealso{
-Other tilings: \code{\link{gs_voronoi}}
+Other tilings: 
+\code{\link{gs_voronoi}()}
 }
 \concept{tilings}

@@ -4,14 +4,12 @@
 \alias{gs_point}
 \title{Create a point \code{geom}}
 \usage{
-gs_point(anchor = NULL, window = NULL, vertices = 1, sketch = NULL,
-  ...)
+gs_point(anchor = NULL, window = NULL, vertices = 1, sketch = NULL, ...)
 }
 \arguments{
 \item{anchor}{[\code{geom(1)}|\code{data.frame(1)}]\cr Object to derive the
 \code{geom} from. It must include column names \code{x}, \code{y} and
-optionally a custom \code{fid}. To set further attributes, use
-\code{\link{setTable}}.}
+optionally a custom \code{fid}.}
 
 \item{window}{[\code{data.frame(1)}]\cr in case the reference window deviates
 from the bounding box of \code{anchor} (minimum and maximum values),
@@ -19,10 +17,11 @@ specify this here.}
 
 \item{vertices}{[\code{integer(1)}]\cr number of vertices.}
 
-\item{sketch}{[\code{RasterLayer(1)} | \code{matrix(1)}]\cr Gridded object
-that serves as template to sketch points.}
+\item{sketch}{[\code{raster(1)}]\cr raster object that serves as template to
+sketch polygons.}
 
-\item{...}{[various]\cr additional arguments; see Details.}
+\item{...}{[various]\cr graphical parameters to \code{\link{gt_locate}}, in
+case points are sketched; see \code{\link[grid]{gpar}}}
 }
 \value{
 An invisible \code{geom}.
@@ -37,10 +36,6 @@ The arguments \code{anchor} and \code{sketch} indicate how the line
   parametrically from the given objects' points, \item if an object is set in
   \code{sketch}, this is used to create the \code{geom} interactively, by
   clicking into the plot.}
-
-  Possible additional arguments are: \itemize{ \item verbose = TRUE/FALSE
-  \item graphical parameters to \code{\link{gt_locate}}, in case points are
-  sketched; see \code{\link[grid]{gpar}}}
 }
 \examples{
 # 1. create points programmatically
@@ -57,9 +52,6 @@ window <- data.frame(x = c(0, 80),
 gs_point(anchor = coords, window = window) \%>\%
   visualise(linecol = "green")
 
-# if a plot is already open, vertices are set relative to its' window
-visualise(geom = gs_point(anchor = coords), new = FALSE)
-
 # when a geom is used in 'anchor', its properties are passed on
 aGeom <- setWindow(x = aGeom, to = window)
 gs_point(anchor = aGeom) \%>\%
@@ -67,11 +59,13 @@ gs_point(anchor = aGeom) \%>\%
 \donttest{
 # 2. sketch two points by clicking into a template
 gs_point(sketch = gtRasters$continuous, vertices = 2) \%>\%
-  visualise(linecol = "orange", pointsymbol = 5, new = FALSE)
+  visualise(geom = ., linecol = "green", pointsymbol = 5, new = FALSE)
 }
 }
 \seealso{
-Other geometry shapes: \code{\link{gs_line}},
-  \code{\link{gs_polygon}}, \code{\link{gs_random}}
+Other geometry shapes: 
+\code{\link{gs_line}()},
+\code{\link{gs_polygon}()},
+\code{\link{gs_random}()}
 }
 \concept{geometry shapes}
