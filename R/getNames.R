@@ -1,28 +1,28 @@
 #' Get the name(s) of a spatial object.
 #'
 #' @param x the object from which to get the name.
-#' @return A vector of the requested names.
+#' @return A vector of the names of \code{x}.
 #' @family getters
-#' @name getName
-#' @rdname getName
+#' @name getNames
+#' @rdname getNames
 NULL
 
 # generic ----
-#' @rdname getName
-#' @name getName
+#' @rdname getNames
+#' @name getNames
 #' @export
-if(!isGeneric("getName")){
-  setGeneric(name = "getName",
+if(!isGeneric("getNames")){
+  setGeneric(name = "getNames",
              def = function(x, ...){
-               standardGeneric("getName")
+               standardGeneric("getNames")
              }
   )
 }
 
 # any ----
-#' @rdname getName
+#' @rdname getNames
 #' @export
-setMethod(f = "getName",
+setMethod(f = "getNames",
           signature = "ANY",
           definition = function(x){
             NULL
@@ -30,24 +30,38 @@ setMethod(f = "getName",
 )
 
 # geom ----
-#' @rdname getName
-#' @importFrom checkmate testNumeric assertIntegerish testCharacter assertSubset
+#' @rdname getNames
+#' @examples
+#' getNames(x = gtGeoms$grid$continuous)
 #' @export
-setMethod(f = "getName",
+setMethod(f = "getNames",
           signature = "geom",
           definition = function(x){
 
-            out <- names(x@feature)
+            theFeatures <- x@feature
+            if(all(c("val", "len") %in% names(theFeatures))){
+              out <- "values"
+            } else {
+              out <- names(theFeatures)
+              out <- out[!out %in% c("fid", "gid")]
+
+              if(length(out) == 0){
+                out <- paste0(getType(x = x)[1], "_geom")
+              }
+            }
 
             return(out)
           }
 )
 
-# matrix ----
-#' @rdname getName
+# sf ----
+#' @rdname getNames
+#' @examples
+#'
+#' getNames(x = gtSF$polygon)
 #' @importFrom sf st_drop_geometry
 #' @export
-setMethod(f = "getName",
+setMethod(f = "getNames",
           signature = "sf",
           definition = function(x){
             allNames <- names(x)
@@ -59,10 +73,13 @@ setMethod(f = "getName",
 )
 
 # RasterLayer ----
-#' @rdname getName
+#' @rdname getNames
+#' @examples
+#'
+#' getNames(x = gtRasters)
 #' @importFrom checkmate testNumeric assertIntegerish testCharacter assertSubset
 #' @export
-setMethod(f = "getName",
+setMethod(f = "getNames",
           signature = "Raster",
           definition = function(x){
 

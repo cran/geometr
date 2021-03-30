@@ -1,7 +1,9 @@
 #' Get the reference window of a spatial object.
 #'
 #' @param x the object from which to derive the reference window.
-#' @return A table of the corners of the reference window of \code{x}.
+#' @return A tibble of the corner coordinates of the reference window of
+#'   \code{x}. This table two columns (x and y) and two rows (minimum and
+#'   maximum).
 #' @family getters
 #' @name getWindow
 #' @rdname getWindow
@@ -55,8 +57,8 @@ setMethod(f = "getWindow",
           signature = signature("Spatial"),
           definition = function(x){
             ext <- extent(x)
-            tibble(x = c(ext@xmin, ext@xmax, ext@xmax, ext@xmin, ext@xmin),
-                   y = c(ext@ymin, ext@ymin, ext@ymax, ext@ymax, ext@ymin))
+            tibble(x = c(ext@xmin, ext@xmax),
+                   y = c(ext@ymin, ext@ymax))
           }
 )
 
@@ -72,37 +74,8 @@ setMethod(f = "getWindow",
           signature = "sf",
           definition = function(x){
             ext <- st_bbox(x)
-            tibble(x = c(ext[[1]], ext[[3]], ext[[3]], ext[[1]], ext[[1]]),
-                   y = c(ext[[2]], ext[[2]], ext[[4]], ext[[4]], ext[[2]]))
-          }
-)
-
-# ppp ----
-#' @rdname getWindow
-#' @examples
-#'
-#' getWindow(x = gtPPP)
-#' @export
-setMethod(f = "getWindow",
-          signature = "ppp",
-          definition = function(x){
-            temp <- x
-            if("bdry" %in% names(temp$window)){
-              verts <- do.call(rbind.data.frame, temp$window$bdry)
-              fids <- rep(seq_along(temp$window$bdry), sapply(temp$window$bdry, function(x) length(x[[1]])))
-              verts <- bind_cols(verts, fid = fids)
-              verts <- .updateVertices(input = verts)
-              verts$fid <- NULL
-            } else {
-              xmin <- min(temp$window$xrange)
-              xmax <- max(temp$window$xrange)
-              ymin <- min(temp$window$yrange)
-              ymax <- max(temp$window$yrange)
-              verts <- tibble(x = c(xmin, xmax, xmax, xmin, xmin),
-                              y = c(ymin, ymin, ymax, ymax, ymin))
-            }
-
-            return(verts)
+            tibble(x = c(ext[[1]], ext[[3]]),
+                   y = c(ext[[2]], ext[[4]]))
           }
 )
 
@@ -118,8 +91,8 @@ setMethod(f = "getWindow",
           signature = "Raster",
           definition = function(x){
             ext <- extent(x)
-            bind_cols(x = c(ext@xmin, ext@xmax, ext@xmax, ext@xmin, ext@xmin),
-                      y = c(ext@ymin, ext@ymin, ext@ymax, ext@ymax, ext@ymin))
+            bind_cols(x = c(ext@xmin, ext@xmax),
+                      y = c(ext@ymin, ext@ymax))
           }
 )
 
@@ -133,7 +106,7 @@ setMethod(f = "getWindow",
 setMethod(f = "getWindow",
           signature = "matrix",
           definition = function(x){
-            bind_cols(x = c(0, ncol(x), ncol(x), 0, 0),
-                      y = c(0, 0, nrow(x), nrow(x), 0))
+            bind_cols(x = c(0, ncol(x)),
+                      y = c(0, nrow(x)))
           }
 )

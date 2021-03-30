@@ -25,13 +25,13 @@ getExtent(x = st_read(system.file("shape/nc.shp", package="sf")))
 #  library(magrittr)
 
 ## -----------------------------------------------------------------------------
-nc_sf <- st_read(system.file("shape/nc.shp", package="sf"))
+nc_sf <- st_read(system.file("shape/nc.shp", package = "sf"))
 st_bbox(nc_sf)
 
 nc_sp <- as_Spatial(nc_sf)
 bbox(nc_sp)
 
-ras <- raster(system.file("external/test.grd", package="raster"))
+ras <- raster(system.file("external/test.grd", package = "raster"))
 extent(ras)
 
 ## -----------------------------------------------------------------------------
@@ -83,7 +83,7 @@ island <- tibble(x = c(60, 65, 65, 60, 60),
 temp <- bind_rows(pond, island, getPoints(aPoly))
 
 (perforatedPoly <- gs_polygon(anchor = temp))
-visualise(perforatedPoly, fillcol = fid)
+visualise(perforatedPoly, fillcol = "fid")
 
 ## -----------------------------------------------------------------------------
 new_geom <- gc_geom(input = nc_sf, group = TRUE)
@@ -124,20 +124,18 @@ validpoints <- getPoints(x = trees)
 title <- paste0("Clocaenog - tree heights (", dim(validpoints)[1], ")")
 
 # and visualise
-visualise(!!title := trees, linecol = height)
-visualise(!!title := getGroups(trees, deciduous), linecol = height)
+visualise(!!title := trees, linecol = "height")
 
 ## -----------------------------------------------------------------------------
 visualise(aPoly)
 
-reflPoly <- gt_reflect(geom = aPoly, angle = 45)
+reflPoly <- gt_reflect(obj = aPoly, angle = 45)
 
 visualise(reflPoly, linecol = "deeppink", new = FALSE, trace = TRUE)
 
 ## -----------------------------------------------------------------------------
 # make points and discard duplicates ...
-(somePoints <- gs_point(anchor = aPoly) %>%
-  getPoints(!(duplicated(x) & duplicated(y))))
+(somePoints <- gs_point(anchor = aPoly))
 
 # ... and recreate a polygon from that
 (aPoly <- gs_polygon(anchor = somePoints))
@@ -147,35 +145,36 @@ visualise('I made a polygon!' = aPoly, gtRasters$continuous)
 
 ## ---- fig.height=3.5----------------------------------------------------------
 relPoly <- gs_rectangle(anchor = aPoly) %>% 
-  setWindow(to = tibble(x = c(0, 100), y = c(0, 100))) %>%
-  gt_scale(to = "relative")
+  setWindow(to = tibble(x = c(0, 100), y = c(0, 100)))
 
 visualise(gtRasters$categorical, gtRasters$continuous)
 visualise(relPoly, linecol = "deeppink", new = FALSE)
 
 ## -----------------------------------------------------------------------------
-zoom <- setWindow(x = relPoly, to = getExtent(x = gtRasters$categorical)) %>% 
-  gt_scale(to = "absolute")
+zoom <- gt_scale(obj = relPoly, range = getExtent(x = gtRasters$categorical)) %>% 
+  setWindow(to = getExtent(x = gtRasters$categorical))
+  
 visualise('zoomed object' = gtRasters$categorical, window = getExtent(x = zoom))
 
 ## -----------------------------------------------------------------------------
-anImage <- brick(system.file("external/rlogo.grd", package="raster"))
-visualise('R logo' = anImage, image = TRUE)
+R_logo <- brick(system.file("external/rlogo.grd", package = "raster"))
+visualise('R logo' = gc_geom(input = R_logo, as_hex = TRUE))
 
 ## -----------------------------------------------------------------------------
 gtTheme
 
 ## -----------------------------------------------------------------------------
 treeTheme <- setTheme(scale = list(param = "pointsize", to = "dbh"), 
-                      vector = list(pointsize = c(0.05, 0.77)))
-visualise(`Clocaenog - tree diameters` = trees, theme = treeTheme)
+                      parameters = list(pointsize = c(0.05, 0.77)))
+visualise(`Clocaenog - tree diameters` = trees, theme = treeTheme, clip = FALSE)
 
 ## -----------------------------------------------------------------------------
-treeTheme <- setTheme(vector = list(pointsize = c(0.05, 0.77)))
+treeTheme <- setTheme(parameters = list(pointsize = c(0.05, 0.77)))
 visualise(`Clocaenog - tree diameters and heights` = trees, theme = treeTheme,
-          pointsize = dbh, linecol = height)
+          pointsize = "dbh", linecol = "height")
 
 ## -----------------------------------------------------------------------------
-treeTheme <- setTheme(vector = list(linecol = c("#00204DFF", "#73D216FF", "#FFEA46FF", "#CC0000F0")))
-visualise(`Clocaenog - tree heights` = trees, theme = treeTheme, linecol = height)
+treeTheme <- setTheme(parameters = list(colours = c("#00204DFF", "#73D216FF", 
+                                                    "#FFEA46FF", "#CC0000F0")))
+visualise(`Clocaenog - tree heights` = trees, theme = treeTheme, linecol = "height")
 

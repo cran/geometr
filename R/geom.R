@@ -2,11 +2,10 @@
 #'
 #' A \code{geom} stores a table of points, a table of feature to which the
 #' points are associated and a table of groups, to which features are
-#' associated. A \code{geom} can be spatial, but is not by default. A
-#' \code{geom} can either have absolute or relative values, where relative
-#' values specify the point position relative to the \code{window} slot.
+#' associated. A \code{geom} can be spatial (if it has a coordinate reference
+#' system assigned to it), but is not by default.
 #'
-#' A \code{geom} is one of three geometry objects: \itemize{ \item
+#' A \code{geom} has one of three geometry types: \itemize{ \item
 #' \code{"point"}, when none of the points are connected to other points, \item
 #' \code{"line"}, where points with the same \code{fid} are connected following
 #' the sequence of their order, without the line closing in itself and \item
@@ -20,34 +19,30 @@
 #' feature ID relates coordinates to features and thus common attributes. Points
 #' and Lines are implemented straightforward in this model, but polygons, which
 #' may contain holes, are a bit trickier. In \code{geometr} they are implemented
-#' as follows: \enumerate{ \item All points with the same \code{fid} make up
-#' one polygon, irrespective of it containing holes or not. \item The outer
+#' as follows: \enumerate{ \item All points with the same \code{fid} make up one
+#' polygon, irrespective of it containing holes or not. \item The outer
 #' path/ring of a polygon is composed of all points until a duplicated of its
 #' first point occurs. This signals that all following points are part of
 #' another path/ring, which must be inside the outer path and which consists of
-#' all points until a duplicate of it's first point occurs. \item This
-#' repeats until all points of the feature are processed.}
+#' all points until a duplicate of it's first point occurs. \item This repeats
+#' until all points of the feature are processed.}
 #'
-#' Moreover, a \code{geom} does not have the slot \emph{extent}, which
-#' characterises the minimum and maximum value of the point coordinates and
-#' which is thus derived "on the fly" from the points. Instead it has a
-#' \emph{reference window}, which is sort of a second extent that may be bigger
-#' (or smaller) than \code{extent} and which determines the relative position of
-#' the points when plotting.
+#' Moreover, a \code{geom} has a \emph{reference window}, which is sort of a
+#' second extent that may be bigger (or smaller) than the extent and which
+#' determines the relative position of the points when plotting.
 #'
 #' @slot type [\code{character(1)}]\cr the type of feature, either
 #'   \code{"point"}, \code{"line"}, \code{"polygon"} or \code{"grid"}.
 #' @slot point [\code{data.frame(1)}]\cr the \code{fid} (feature ID), \code{x}
-#'   and \code{y} coordinates per point and optional arbitrary point
-#'   attributes.
+#'   and \code{y} coordinates per point and optional arbitrary point attributes.
 #' @slot feature [\code{data.frame(1)}]\cr \code{fid} (feature ID), \code{gid}
 #'   (group ID) and optional arbitrary feature attributes.
 #' @slot group [\code{data.frame(1)}]\cr \code{gid} (group ID) and optional
 #'   arbitrary group attributes.
 #' @slot window [\code{data.frame(1)}]\cr the minimum and maximum value in x and
 #'   y dimension of the reference window in which the \code{geom} dwells.
-#' @slot scale [\code{character(1)}]\cr whether the point coordinates are
-#'   stored as \code{"absolute"} values, or \code{"relative"} to \code{window}.
+#' @slot scale [\code{character(1)}]\cr whether the point coordinates are stored
+#'   as \code{"absolute"} values, or \code{"relative"} to \code{window}.
 #' @slot crs [\code{character(1)}]\cr the coordinate reference system in proj4
 #'   notation.
 #' @slot history [\code{list(.)}]\cr a list of steps taken to derive the
@@ -56,10 +51,11 @@
 geom <- setClass(Class = "geom",
                  slots = c(type = "character",
                            point = "data.frame",
-                           feature = "list",
-                           group = "list",
+                           feature = "data.frame",
+                           group = "data.frame",
+                           # extent = "data.frame",
+                           # manage extent properly
                            window = "data.frame",
-                           scale = "character",
                            crs = "character",
                            history = "list"
                  )
@@ -74,10 +70,6 @@ setValidity("geom", function(object){
   } else {
     if(!any(object@type %in% c("point", "line", "polygon", "grid"))){
       errors = c(errors, "the geom must either be of type 'point', 'line', 'polygon' or 'grid'.")
-    } else if(object@type == "point"){
-      if(dim(object@point)[1] < 1){
-        errors = c(errors, "a geom of type 'point' must have at least 1 point.")
-      }
     } else if(object@type == "line"){
       if(dim(object@point)[1] < 2){
         errors = c(errors, "a geom of type 'line' must have at least 2 points.")
@@ -120,11 +112,11 @@ setValidity("geom", function(object){
       errors = c(errors, "the slot 'feature' must contain named lists.")
     }
     if(object@type != "grid"){
-      for(i in seq_along(object@feature)){
-        if(!all(c("fid", "gid") %in% names(object@feature[[i]]))){
+      # for(i in seq_along(object@feature)){
+        if(!all(c("fid", "gid") %in% names(object@feature))){
           errors = c(errors, "the geom must have a features table with at least the columns 'fid' and 'gid'.")
         }
-      }
+      # }
     }
   }
 
@@ -137,11 +129,11 @@ setValidity("geom", function(object){
     if(is.null(names(object@group))){
       errors = c(errors, "the slot 'group' must contain named lists.")
     }
-    for(i in seq_along(object@group)){
-      if(!all(c("gid") %in% names(object@group[[i]]))){
-        errors = c(errors, "the geom must have a group table with the column 'gid'.")
-      }
-    }
+    # for(i in seq_along(object@group)){
+      # if(!any(c("value", "gid") %in% names(object@group))){
+      #   errors = c(errors, "the geom must have a group table with the column 'value'.")
+      # }
+    # }
   }
 
   if(!.hasSlot(object = object, name = "window")){
@@ -152,25 +144,6 @@ setValidity("geom", function(object){
     }
     if(!all(c("x" ,"y") %in% names(object@window))){
       errors = c(errors, "the geom must have a window table with columns 'x' and 'y'.")
-    }
-  }
-
-  if(!.hasSlot(object = object, name = "scale")){
-    errors = c(errors, "the geom does not have a 'scale' slot.")
-  } else {
-    if(!is.character(object@scale)){
-      errors = c(errors, "the slot 'scale' is not a character vector.")
-    } else {
-      # if(object@type == "grid"){
-      #   if(!any(object@scale %in% c("continuous", "categorical"))){
-      #     errors = c(errors, "the scale must either be 'continuous' or 'categorical'.")
-      #   }
-      # } else {
-      if(!any(object@scale %in% c("absolute", "relative"))){
-        errors = c(errors, "the scale must either be 'absolute' or 'relative'.")
-      }
-      # }
-
     }
   }
 
@@ -214,8 +187,8 @@ setMethod(f = "show",
             theGroups <- getGroups(x = object)
 
             vertAttribs <- length(thePoints)
-            featureAttribs <- length(theFeatures)
-            groupAttribs <- length(theGroups)
+            featureAttribs <- names(theFeatures)[!names(theFeatures) %in% c("fid", "gid")]
+            groupAttribs <- names(theGroups)[!names(theGroups) %in% c("gid")]
 
             myAttributes <- NULL
             points <- feats <- groups <- FALSE
@@ -227,35 +200,20 @@ setMethod(f = "show",
             }
 
             if(theType == "grid"){
-
-              if(!is.data.frame(theFeatures)){
-                theFeats <- names(theFeatures)
-                for(i in seq_along(theFeatures)){
-                  theLayer <- theGroups[[i]]
-                  theName <- names(theGroups)[i]
-
-                  if(dim(theLayer)[1] != 0){
-                    myAttributes <- c(myAttributes, paste0(" {", theName, "} ",
-                                                           ifelse(featureAttribs <= 9,
-                                                                  paste0(paste0(names(theLayer)[!names(theLayer) %in% c("gid")], collapse = ", "), "\n"),
-                                                                  paste0(paste0(c(head(names(theLayer)[!names(theLayer) %in% c("gid")], 9), "..."), collapse = ", "), "\n")
-                                                           )))
-                  }
-                }
-              } else {
-                theFeats <- names(object@feature)
-                theLayer <- theGroups
-                if(!is.null(theLayer)){
-                  if(!all(names(thePoints) %in% c("gid"))){
-                    myAttributes <- c(myAttributes, paste0(" ", ifelse(featureAttribs <= 9,
-                                                                       paste0(paste0(names(theLayer)[!names(theLayer) %in% c("gid")], collapse = ", "), "\n"),
-                                                                       paste0(paste0(c(head(names(theLayer)[!names(theLayer) %in% c("gid")], 9), "..."), collapse = ", "), "\n")
-                    )))
-                  }
+              theFeats <- featureAttribs
+              theLayer <- theGroups
+              if(!is.null(theLayer)){
+                if(!all(names(thePoints) %in% c("gid"))){
+                  myAttributes <- c(myAttributes, paste0(" ", ifelse(length(groupAttribs) == 0,
+                                                                     paste0("--\n"),
+                                                                     ifelse(length(groupAttribs) <= 9,
+                                                                            paste0(paste0(groupAttribs, collapse = ", "), "\n"),
+                                                                            paste0(paste0(c(head(groupAttribs, 9), "..."), collapse = ", "), "\n"))
+                  )))
                 }
               }
 
-              if(length(unique(theFeats)) == 1){
+              if(length(unique(groupAttribs)) == 1){
                 myFeat <- "layer"
               } else {
                 myFeat <- "layers"
@@ -294,20 +252,20 @@ setMethod(f = "show",
                   featureString <- " (features) "
                 }
                 myAttributes <- c(myAttributes, paste0(featureString,
-                                                       ifelse(featureAttribs <= 9,
-                                                              paste0(paste0(names(theFeatures)[!names(theFeatures) %in% c("fid", "gid")], collapse = ", "), "\n"),
-                                                              paste0(paste0(c(head(names(theFeatures)[!names(theFeatures) %in% c("fid", "gid")], 9), "..."), collapse = ", "), "\n")
+                                                       ifelse(length(featureAttribs) <= 9,
+                                                              paste0(paste0(featureAttribs, collapse = ", "), "\n"),
+                                                              paste0(paste0(c(head(featureAttribs, 9), "..."), collapse = ", "), "\n")
                                                        )))
                 feats <- TRUE
               }
               if(!all(names(theGroups) %in% c("gid"))){
                 if(feats | points){
-                  groupString <- "           (groups) "
+                  groupString <- "            (groups) "
                 } else {
                   groupString <- " (groups) "
                 }
                 myAttributes <- c(myAttributes, paste0(groupString,
-                                                       ifelse(groupAttribs <= 9,
+                                                       ifelse(length(groupAttribs) <= 9,
                                                               paste0(paste0(names(theGroups)[!names(theGroups) %in% c("gid")], collapse = ", "), "\n"),
                                                               paste0(paste0(c(head(names(theGroups)[!names(theGroups) %in% c("gid")], 9), "..."), collapse = ", "), "\n")
                                                        )))

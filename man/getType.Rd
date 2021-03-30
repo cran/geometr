@@ -6,7 +6,6 @@
 \alias{getType,geom-method}
 \alias{getType,Spatial-method}
 \alias{getType,sf-method}
-\alias{getType,ppp-method}
 \alias{getType,Raster-method}
 \alias{getType,matrix-method}
 \title{Get the type of a spatial object.}
@@ -19,8 +18,6 @@
 
 \S4method{getType}{sf}(x)
 
-\S4method{getType}{ppp}(x)
-
 \S4method{getType}{Raster}(x)
 
 \S4method{getType}{matrix}(x)
@@ -29,32 +26,36 @@
 \item{x}{the object for which to determine the type.}
 }
 \value{
-A vector of two values giving the general type (vector/raster) and
-  the specific type/class of \code{x}.
+A vector of two values of the geometry type (point/line/polygon/grid)
+  and the specific main type/class of \code{x}.
 }
 \description{
 Get the type of a spatial object.
 }
 \examples{
-getType(x = gtGeoms$polygon)
+getType(x = gtGeoms$point)
 
 getType(x = gtSP$SpatialPolygons)
 
 getType(x = gtSF$multiline)
 
 getType(x = gtRasters$categorical)
+
+getType(x = matrix(0, 3, 5))
 }
 \seealso{
 Other getters: 
 \code{\link{getCRS}()},
+\code{\link{getCols}()},
 \code{\link{getExtent}()},
 \code{\link{getFeatures}()},
 \code{\link{getGroups}()},
 \code{\link{getHistory}()},
-\code{\link{getLayer}()},
-\code{\link{getName}()},
+\code{\link{getLayers}()},
+\code{\link{getNames}()},
 \code{\link{getPoints}()},
 \code{\link{getRes}()},
+\code{\link{getRows}()},
 \code{\link{getWindow}()}
 }
 \concept{getters}

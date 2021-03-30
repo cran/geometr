@@ -31,17 +31,32 @@ setMethod(f = "getHistory",
 
 # geom ----
 #' @rdname getHistory
+#' @examples
+#' library(tibble)
+#' library(magrittr)
+#'
+#' geom <- tibble(x = c(40, 70, 70, 50),
+#'                y = c(40, 40, 60, 70)) %>%
+#'   gs_polygon() %>%
+#'   gt_reflect(angle = 45)
+#' getHistory(x = geom)
 #' @export
 setMethod(f = "getHistory",
           signature = "geom",
           definition = function(x){
             hist <- x@history
+            if(length(hist) == 0){
+              hist <- list("the object was loaded from memory")
+            }
             return(hist)
           }
 )
 
 # RasterLayer ----
 #' @rdname getHistory
+#' @examples
+#'
+#' getHistory(x = gtRasters)
 #' @export
 setMethod(f = "getHistory",
           signature = "Raster",
@@ -53,6 +68,9 @@ setMethod(f = "getHistory",
               }
             } else {
               hist <- x@history
+            }
+            if(length(hist) == 0){
+              hist <- list("the object was loaded from memory")
             }
             return(hist)
           }

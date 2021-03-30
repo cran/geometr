@@ -17,15 +17,11 @@ an object of class \code{Raster*}
 Transform a spatial object to class \code{Raster*}
 }
 \examples{
-rasGeom <- gc_geom(input = gtRasters$categorical)
-
-gc_raster(input = rasGeom)
+gc_raster(input = gtGeoms$grid$categorical)
 }
 \seealso{
 Other spatial classes: 
 \code{\link{gc_geom}()},
-\code{\link{gc_grob}()},
-\code{\link{gc_ppp}()},
 \code{\link{gc_sf}()},
 \code{\link{gc_sp}()}
 }

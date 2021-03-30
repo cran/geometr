@@ -6,7 +6,6 @@
 \alias{getWindow,geom-method}
 \alias{getWindow,Spatial-method}
 \alias{getWindow,sf-method}
-\alias{getWindow,ppp-method}
 \alias{getWindow,Raster-method}
 \alias{getWindow,matrix-method}
 \title{Get the reference window of a spatial object.}
@@ -19,8 +18,6 @@
 
 \S4method{getWindow}{sf}(x)
 
-\S4method{getWindow}{ppp}(x)
-
 \S4method{getWindow}{Raster}(x)
 
 \S4method{getWindow}{matrix}(x)
@@ -29,7 +26,9 @@
 \item{x}{the object from which to derive the reference window.}
 }
 \value{
-A table of the corners of the reference window of \code{x}.
+A tibble of the corner coordinates of the reference window of
+  \code{x}. This table two columns (x and y) and two rows (minimum and
+  maximum).
 }
 \description{
 Get the reference window of a spatial object.
@@ -42,8 +41,6 @@ getWindow(x = gtSP$SpatialLines)
 
 getWindow(x = gtSF$multilinestring)
 
-getWindow(x = gtPPP)
-
 getWindow(x = gtRasters$categorical)
 
 getWindow(x = matrix(0, 3, 5))
@@ -51,14 +48,16 @@ getWindow(x = matrix(0, 3, 5))
 \seealso{
 Other getters: 
 \code{\link{getCRS}()},
+\code{\link{getCols}()},
 \code{\link{getExtent}()},
 \code{\link{getFeatures}()},
 \code{\link{getGroups}()},
 \code{\link{getHistory}()},
-\code{\link{getLayer}()},
-\code{\link{getName}()},
+\code{\link{getLayers}()},
+\code{\link{getNames}()},
 \code{\link{getPoints}()},
 \code{\link{getRes}()},
+\code{\link{getRows}()},
 \code{\link{getType}()}
 }
 \concept{getters}

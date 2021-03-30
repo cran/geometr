@@ -1,39 +1,32 @@
-#' Visualise raster and geom objects
+#' Visualise geometric objects
 #'
 #' @param ... objects to plot and optional graphical parameters.
-#' @param layer [\code{integerish(.)} | \code{character(.)}]\cr in case the
-#'   objects to plot have several layers, this is the name or index of the
-#'   layer(s) that shall be plotted.
 #' @param window [\code{data.frame(1)}]\cr two opposing corners of a rectangle
 #'   to which the plot is limited.
-#' @param theme [\code{list(7)}]\cr visualising options; see
-#'   \code{\link{setTheme}} for details.
-#' @param trace [\code{logical(1)}]\cr Print the raster object's history (i.e.
-#'   the process according to which it has been created) (\code{TRUE}), or
-#'   simply plot the object (\code{FALSE}, default).
-#' @param image [\code{logical(1)}]\cr set this to \code{TRUE} if \code{raster}
-#'   is actually an image; see Details.
+#' @param theme [\code{list(7)}]\cr the theme from which to take graphical
+#'   parameters; see \code{\link{setTheme}} for details.
+#' @param trace [\code{logical(1)}]\cr Print the provenance information of the
+#'   geometric object (if available) (\code{TRUE}), or simply plot the object
+#'   (\code{FALSE}, default).
 #' @param new [\code{logical(1)}]\cr force a new plot (\code{TRUE}, default).
 #' @param clip [\code{logical(1)}]\cr clip the plot by the plot box
-#'   (\code{TRUE}, default), or plot all of the objects.
-#' @details In case you want to plot an image (similar to
-#'   \code{\link[raster]{plotRGB}}), you either have to: \enumerate{ \item
-#'   provide a \code{RasterStack} with the three layers \code{red}, \code{green}
-#'   and \code{blue} or \item provide a matrix with hexadecimal colour values
-#'   (e.g. '#000000')} and set \code{image = TRUE}.
-#'
+#'   (\code{TRUE}, default), or plot also objects that go beyond the plot box.
 #' @return Returns invisibly an object of class \code{recordedplot}, see
 #'   \code{\link{recordPlot}} for details (and warnings).
 #' @examples
+#' # make an empty plot
+#' visualise()
+#' visualise(window = getExtent(gtRasters$continuous))
+#'
 #' coords <- data.frame(x = c(30, 60, 60, 40),
 #'                      y = c(40, 40, 60, 70),
 #'                      fid = 1)
 #' (aGeom <- gs_polygon(anchor = coords))
 #' visualise(aGeom)
 #'
-#' window <- data.frame(x = c(0, 80),
-#'                      y = c(0, 80))
-#' withWindow <- setWindow(x = aGeom, to = window)
+#' win <- data.frame(x = c(0, 80),
+#'                   y = c(0, 80))
+#' withWindow <- setWindow(x = aGeom, to = win)
 #' visualise(expanded = withWindow)
 #'
 #' (aRaster <-  gtRasters$categorical)
@@ -54,54 +47,84 @@
 #'   testCharacter testIntegerish testNames
 #' @importFrom rlang enquos eval_tidy
 #' @importFrom tibble tibble
-#' @importFrom grid grid.ls grid.newpage pushViewport viewport grid.rect
-#'   grid.raster grid.clip unit grid.draw grid.grill upViewport grid.text gpar
-#'   grid.get convertX downViewport grid.polyline grid.points unit.c
+#' @importFrom grid grid.ls grid.newpage pushViewport viewport grid.layout
+#'   grid.rect grid.raster grid.clip unit grid.draw grid.grill upViewport
+#'   grid.text gpar grid.get convertX downViewport grid.polyline grid.points
+#'   unit.c
 #' @importFrom grDevices recordPlot dev.list
 #' @importFrom raster nlayers getValues as.matrix ncol nrow stack
 #' @importFrom stats quantile
 #' @export
 
-visualise <- function(..., layer = NULL, window = NULL, theme = gtTheme, trace = FALSE, image = FALSE,
-                      new = TRUE, clip = TRUE){
+visualise <- function(...,
+                      window = NULL,
+                      trace = FALSE,
+                      new = TRUE,
+                      clip = TRUE,
+                      theme = gtTheme){
 
-  # layer = NULL; window = NULL; theme = gtTheme; trace = FALSE; image = FALSE; new = TRUE; clip = TRUE; library(checkmate); library(grid); library(rlang)
+  # library(geometr); library(checkmate); library(grid); library(rlang); library(tibble); library(dplyr)
+  # window = NULL; theme = gtTheme; trace = FALSE; new = F; clip = FALSE; plotParams <- list()
+  # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/makePlot.R')
+  # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/updateTheme.R')
+  # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/makeGrob.R')
+  # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/makeLayout.R')
+  # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/makeLegend.R')
+  # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/test_functions.R')
+  # Rcpp::sourceCpp('src/unique.cpp')
 
   # check arguments ----
   window <- .testWindow(x = window)
-  assertDataFrame(x = window, nrows = 5, min.cols = 2, null.ok = TRUE)
   assertClass(x = theme, classes = "gtTheme", null.ok = TRUE)
   assertLogical(x = trace, len = 1, any.missing = FALSE)
-  assertLogical(x = image, len = 1, any.missing = FALSE)
   assertLogical(x = new, len = 1, any.missing = FALSE)
   assertLogical(x = clip, len = 1, any.missing = FALSE)
 
   # derive the objects to plot
   objs <- rlang::enquos(...)
+  if(any(!is.null(names(objs)))){
+    objs <- objs[!names(objs) %in% names(theme@parameters)]
+  }
 
-  objects <- list()
-  # get objects
-  for(i in seq_along(objs)){
-    argName <- names(objs)[i]
+  if(length(objs) != 0){
 
-    if(!is.null(argName)){
-      if(argName %in% names(theme@vector)){
-        # exclude theme objects
+    # tease apart objects with several layers (e.g. RasterStack) and determine
+    # names
+    plotObjects <- plotNames <- NULL
+    for(i in seq_along(objs)){
+      theLayers <- getLayers(x = eval_tidy(expr = objs[[i]]))
+      objsName <- names(objs)[i]
+      layerName <- names(theLayers)
+
+      if(objsName %in% c("linecol", "fillcol", "linetype", "linewidth", "pointsize", "pointsymbol")){
         next
+      } else if(objsName == ""){
+        theName <- layerName
+      } else {
+        theName <- rep(objsName, length(theLayers))
+      }
+
+      if(is.null(theLayers)){
+        warning(paste0("object '", names(objs)[i], "' can't be plotted, it's neither a geometric object, nor a graphical parameter."))
+      } else {
+        plotObjects <- c(plotObjects, theLayers)
+        plotNames <- c(plotNames, theName)
       }
     }
-    theObject <- eval_tidy(expr = objs[[i]])
-    if(!image){
-      theObject <- getLayer(x = theObject, layer = layer)
-      if(is.null(theObject)) stop(paste0("'", argName, "' is not an object that can be plotted with 'visualise()'."))
+    names(plotObjects) <- plotNames
+
+  } else {
+    if(!is.null(window)){
+      tempWindow <- window
     } else {
-      theObject <- list(theObject)
+      tempWindow <- tibble(x = c(0, 1), y = c(0, 1))
     }
-    if(argName != ""){
-      names(theObject) <- rep(argName, length(theObject))
-    }
-    objects <- c(objects, theObject)
+    plotObjects <- list(sketching = gs_point(window = tempWindow, vertices = 0))
   }
+
+  # start_overall <- Sys.time()
+  # timings <- NULL
+  # start_time <- Sys.time()
 
   # plot already open? ----
   if(!is.null(dev.list()) & !new){
@@ -112,10 +135,9 @@ visualise <- function(..., layer = NULL, window = NULL, theme = gtTheme, trace =
     panels <- length(panelNames)
   } else{
     newPlot <- TRUE
-    panels <- length(objects)
+    panels <- length(plotObjects)
   }
-  objects <- rep(x = objects, length.out = panels)
-  # return(objects)
+  plotObjects <- rep(x = plotObjects, length.out = panels)
 
   # checkup concerning plot size ----
   if(panels > 15){
@@ -125,6 +147,8 @@ visualise <- function(..., layer = NULL, window = NULL, theme = gtTheme, trace =
       return(invisible(0))
     }
   }
+  # end_time <- Sys.time()
+  # timings <- bind_rows(timings, tibble(activity = "prepare panel(s)", duration = end_time - start_time))
 
   # determine the number of columns and rows and the position of panels
   if(panels > 1){
@@ -136,359 +160,281 @@ visualise <- function(..., layer = NULL, window = NULL, theme = gtTheme, trace =
   panelPosY <- rep(rev(seq(from = 1, to = nrow)), each = ncol)
   panelPosX <- rep(seq(from = 1, to = ncol), times = nrow)
 
+  # start new plot ----
   if(newPlot){
     grid.newpage()
     pushViewport(viewport(name = "geometr"))
   }
 
-  # plot the panels ----
-  for(i in 1:panels){
+  # make and plot the panels ----
+  for(i in seq_along(plotObjects)){
 
-    if(!newPlot){
-      # set objects[[i]]@window to the previous panel extent
-      prev <- grid.get(gPath("extentGrob"), global = TRUE)
-      window <- .testWindow(x = tibble(x = c(as.numeric(prev$x), as.numeric(prev$x) + as.numeric(prev$width)),
-                                       y = c(as.numeric(prev$y), as.numeric(prev$y) + as.numeric(prev$height))))
-    }
+    # manage the object and its name ----
+    theObject <- plotObjects[[i]]
+    theType <- getType(x = plotObjects[[i]])[1]
+    theName <- names(plotObjects)[i]
 
-    # make colours from   theme for the object ----
-    obj <- makeObject(x = objects[i],
-                      window = window,
-                      image = image,
-                      theme = theme,
-                      ...)
+    if(newPlot | (!newPlot & theType == "grid")){
 
-    # make panel layout ----
-    pnl <- makeLayout(x = obj, theme = theme)
+      # first, prepare the object for plotting ----
+      # start_time <- Sys.time()
+      if(!is.null(window)){
+        # if given, from the argument
+        theWindow <- window
+      } else {
+        # and otherwise from the object to plot
+        theWindow <- getWindow(x = theObject)
+      }
 
-    # ----
-    if(newPlot | (!newPlot & obj$type == "raster")){
+      temp <- .makePlot(x = theObject, window = theWindow, theme = theme, ...)
+      theTheme <- temp$theme
+      theGrob <- temp$grob
+      theLegend <- temp$legend
+      theLayout <- temp$layout
+      # end_time <- Sys.time()
+      # timings <- bind_rows(timings, tibble(activity = "make object", duration = end_time - start_time))
 
-      # create the plot ----
-      # open the panel viewport
+      # then, create the plot ----
+      # first, create the plot region for the i-th panel. This serve to derive all distances
       pushViewport(viewport(x = (panelPosX[i]/ncol)-(1/ncol/2),
                             y = (panelPosY[i]/nrow)-(1/nrow/2),
                             width = 1/ncol,
                             height = 1/nrow,
-                            name = obj$name))
+                            name = theName))
       grid.rect(width = convertX(unit(1, "npc"), "native"),
-                gp = gpar(col = NA, fill = NA), name = "panelGrob")
-      grid.rect(height = pnl$yMargin, width = pnl$xMargin,
-                gp = gpar(fill = NA, col = NA), name = "marginGrob")
-      grid.rect(x = unit(pnl$minPlotX, "points"), y = unit(pnl$minPlotY, "points"),
-                height = unit(pnl$maxPlotY - pnl$minPlotY, "points"),
-                width = unit(pnl$maxPlotX - pnl$minPlotX, "points"),
-                gp = gpar(fill = NA, col = NA), name = "extentGrob")
+                gp = gpar(col = "#D3D3D3FF", fill = NA), name = "panelGrob")
 
-      pushViewport(viewport(x = unit(0.5, "npc") + unit(pnl$xOffset, "points"),
-                            y = unit(0.5, "npc") + unit(pnl$yOffset, "points"),
-                            height = pnl$gridH,
-                            width = pnl$gridW,
-                            name = "plot"))
+      # grid.rect(height = theLayout$yMargin, width = theLayout$xMargin,
+      #           gp = gpar(col = NA, fill = NA), name = "marginGrob")
+      grid.rect(x = unit(theLayout$window$xmin, "points"),
+                y = unit(theLayout$window$ymin, "points"),
+                height = unit(theLayout$window$ymax - theLayout$window$ymin, "points"),
+                width = unit(theLayout$window$xmax - theLayout$window$xmin, "points"),
+                gp = gpar(col = NA, fill = NA), name = "extentGrob")
 
-      # the title viewport
-      if(theme@title$plot){
-        pushViewport(viewport(name = "title"))
-        grid.text(just = "top",
-                  y = unit(1, "npc") - unit(3, "points") + pnl$titleH,
-                  label = obj$name,
-                  gp = gpar(fontsize = theme@title$fontsize,
-                            col = theme@title$colour))
-        upViewport() # exit title
+      # create the plot layout ----
+      # start_time <- Sys.time()
+      myLayout <- grid.layout(nrow = 4, ncol = 3,
+                              widths = unit.c(unit(theLayout$dim$x1, "points"),
+                                              theLayout$dim$x2,
+                                              unit(theLayout$dim$x3, "points")),
+                              heights = unit.c(unit(theLayout$dim$y1, "points"),
+                                               theLayout$dim$y2,
+                                               unit(theLayout$dim$y3, "points"),
+                                               unit(theLayout$dim$y4, "points"))
+      )
+      layoutVP <- viewport(name = "theLayout",
+                           layout = myLayout)
+      titleVP <- viewport(name = "title",
+                          layout.pos.col = 2,
+                          layout.pos.row = 1)
+      yAxisVP <- viewport(name = "y_axis",
+                          layout.pos.col = 1,
+                          layout.pos.row = 2,
+                          xscale = c(theLayout$scale$xmin, theLayout$scale$xmax),
+                          yscale = c(theLayout$scale$ymin, theLayout$scale$ymax))
+      xAxisVP <- viewport(name = "x_axis",
+                          layout.pos.col = 2,
+                          layout.pos.row = 3,
+                          xscale = c(theLayout$scale$xmin, theLayout$scale$xmax),
+                          yscale = c(theLayout$scale$ymin, theLayout$scale$ymax))
+      legendVP <- viewport(name = "legend",
+                           layout.pos.col = theLayout$legend$posX,
+                           layout.pos.row = theLayout$legend$posY)
+      plotVP <- viewport(name = theType,
+                         layout.pos.col = 2,
+                         layout.pos.row = 2,
+                         xscale = c(theLayout$scale$xmin, theLayout$scale$xmax),
+                         yscale = c(theLayout$scale$ymin, theLayout$scale$ymax))
+
+      boxVP <- viewport(width = unit(1, "npc") - unit(2 * theLayout$margin$x, "native") + unit(theTheme@box$linewidth, "points"),
+                        height = unit(1, "npc") - unit(2 * theLayout$margin$y, "native") + unit(theTheme@box$linewidth, "points"),
+                        xscale = c(theLayout$scale$xmin, theLayout$scale$xmax),
+                        yscale = c(theLayout$scale$ymin, theLayout$scale$ymax),
+                        name = "box")
+      legBoxVP <- viewport(height = unit(1, "npc") * theTheme@legend$yRatio,
+                           width = unit(1, "npc"),
+                           name = "legend_box")
+
+      # end_time <- Sys.time()
+      # timings <- bind_rows(timings, tibble(activity = "create layout", duration = end_time - start_time))
+
+      # do the plotting ... ----
+      pushViewport(layoutVP)
+
+      # ... the title viewport ----
+      # start_time <- Sys.time()
+      if(theTheme@title$plot){
+        pushViewport(titleVP)
+        # grid.rect(gp = gpar(col = "blue", fill = NA))
+        grid.text(y = unit(1, "npc") - unit(3, "points"),
+                  just = "top",
+                  label = theName,
+                  gp = gpar(fontsize = theTheme@title$fontsize,
+                            col = theTheme@title$colour))
+        upViewport() # exit titleVP
       }
 
-      # the yAxis viewport
-      if(theme@yAxis$plot){
-        pushViewport(viewport(xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                              yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                              name = "yAxis"))
+      # ... the yAxis viewport ----
+      if(theTheme@yAxis$plot){
+        pushViewport(yAxisVP)
+        # grid.rect(gp = gpar(col = "red", fill = NA))
 
-        if(theme@yAxis$label$plot){
-          grid.text(just = "right",
-                    x = unit(0, "npc") - unit(2, "points") - pnl$yAxisTicksW,
-                    label = theme@yAxis$label$title,
-                    rot = theme@yAxis$label$rotation,
-                    name = "title",
-                    gp = gpar(fontsize = theme@yAxis$label$fontsize,
-                              col = theme@yAxis$label$colour))
-        }
-
-        if(theme@yAxis$ticks$plot){
-          grid.text(label = as.character(round(pnl$yMajGrid, theme@yAxis$ticks$digits)),
+        if(theTheme@yAxis$label$plot){
+          grid.text(x = unit(1, "npc") - unit(5, "points") - unit(theLayout$labels$yAxisTicksW, "points"),
                     just = "right",
-                    x = unit(-0.005, "npc"),
-                    y = unit(pnl$yMajGrid, "native"),
-                    rot = theme@xAxis$ticks$rotation,
-                    name = "ticks",
-                    gp = gpar(fontsize = theme@yAxis$ticks$fontsize,
-                              col = theme@yAxis$ticks$colour))
+                    label = theTheme@yAxis$label$title,
+                    rot = theTheme@yAxis$label$rotation,
+                    name = "y_title",
+                    gp = gpar(fontsize = theTheme@yAxis$label$fontsize,
+                              col = theTheme@yAxis$label$colour))
         }
-        upViewport() # exit yAxis
+
+        if(theTheme@yAxis$ticks$plot){
+          grid.text(x = unit(1, "npc") - unit(2, "points"),
+                    label = as.character(round(theLayout$grid$yMaj, theTheme@yAxis$ticks$digits)),
+                    just = "right",
+                    y = unit(theLayout$grid$yMaj, "native"),
+                    rot = theTheme@xAxis$ticks$rotation,
+                    name = "y_tick_labels",
+                    gp = gpar(fontsize = theTheme@yAxis$ticks$fontsize,
+                              col = theTheme@yAxis$ticks$colour))
+        }
+        upViewport() # exit yAxisVP
       }
 
-      # the xAxis viewport
-      if(theme@xAxis$plot){
-        pushViewport(viewport(xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                              yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                              name = "xAxis"))
+      # ... the xAxis viewport ----
+      if(theTheme@xAxis$plot){
+        pushViewport(xAxisVP)
+        # grid.rect(gp = gpar(col = "red", fill = NA))
 
-        if(theme@yAxis$label$plot){
-          grid.text(just = "bottom",
-                    y = unit(0, "npc") - unit(2, "points") - pnl$xAxisTitleH,
-                    label = theme@xAxis$label$title,
-                    rot = theme@xAxis$label$rotation,
-                    name = "title",
-                    gp = gpar(fontsize = theme@xAxis$label$fontsize,
-                              col = theme@xAxis$label$colour))
-        }
-
-        if(theme@xAxis$ticks$plot){
-          grid.text(label = as.character(round(pnl$xMajGrid, theme@xAxis$ticks$digits)),
+        if(theTheme@yAxis$label$plot){
+          grid.text(y = unit(1, "npc") - unit(3, "points") - unit(theLayout$labels$xAxisTicksH, "points"),
                     just = "top",
-                    x = unit(pnl$xMajGrid, "native"),
-                    y = unit(-0.005, "npc"),
-                    rot = theme@xAxis$ticks$rotation,
-                    name = "ticks",
-                    gp = gpar(fontsize = theme@xAxis$ticks$fontsize,
-                              col = theme@xAxis$ticks$colour))
-        }
-        upViewport() # exit xAxis
-      }
-
-      # the legend viewport
-      if(theme@legend$plot & obj$hasLegend){
-
-        pushViewport(viewport(name = "legend"))
-
-        # go through possible legend attributes and check whether it has more
-        # than 1 unique value
-        for(j in seq_along(obj$legend)){
-          theParam <- names(obj$legend)[j]
-          theLegend <- obj$legend[[j]]
-          legendName <- names(theLegend[,1])
-
-          if(length(theLegend$pos) == 1){
-            maxYScale <- unit(as.numeric(theLegend$pos[length(theLegend$pos)]) + 1, "native")
-          } else {
-            maxYScale <- unit(as.numeric(theLegend$pos[which.max(theLegend$pos)]) + 1, "native")
-          }
-          pushViewport(viewport(height = unit(1, "npc") * theme@legend$sizeRatio,
-                                yscale = c(1, maxYScale),
-                                name = legendName))
-
-          # this is a little hack to get all the values that are contained in the
-          # object "into" the plotted object for later use (e.g. by gt_locate())
-          theValues <- unlist(obj$params[legendName], use.names = FALSE)
-          grid.text(label = theValues,
-                    name = "legend_values",
-                    gp = gpar(col = NA))
-
-
-          if(theParam %in% c("linecol", "fillcol")){
-
-            # 2. also make sure that the NA colour is always at the bottom (this
-            # seems to be not the case when $range has a value)
-
-            if(!is.null(theme@scale$bins)){
-              theColours <- colorRampPalette(colors = theme@vector[[theParam]])(theme@scale$bins)
-            } else {
-              temp <- unlist(obj$params[legendName], use.names = FALSE)
-              theColours <- unique(unlist(obj$params[order(temp),][theParam], use.names = FALSE))
-            }
-            grid.raster(x = unit(1, "npc") + pnl$legendX[j],
-                        width = unit(10, "points"),
-                        height = unit(1, "npc"),
-                        just = "left",
-                        name = "legend_items",
-                        image = rev(theColours),
-                        interpolate = FALSE)
-
-            if(theme@legend$box$plot){
-              grid.rect(x = unit(1, "npc") + pnl$legendX[j],
-                        just = "left",
-                        width = unit(10, "points"),
-                        name = "legend_box",
-                        gp = gpar(col = theme@legend$box$colour,
-                                  fill = NA,
-                                  lty = theme@legend$box$linetype,
-                                  lwd = theme@legend$box$linewidth))
-            }
-
-          } else if(theParam %in% "pointsize"){
-
-            theSizes <- sort(unique(unlist(obj$params[theParam], use.names = FALSE)))[theLegend$pos]
-            grid.points(x = rep(unit(1, "npc") + pnl$legendX[j], times = length(theLegend$pos)),
-                        y = unit(theLegend$pos, "native") - unit(0.5, "native"),
-                        pch = theme@vector$pointsymbol[1],
-                        size = unit(theSizes, "char"),
-                        name = "legend_items")
-
-          } else if(theParam %in% "pointsymbol"){
-
-            theSymbols <- sort(unique(unlist(obj$params[theParam], use.names = FALSE)))[theLegend$pos]
-            grid.points(x = rep(unit(1, "npc") + pnl$legendX[j], length(theSymbols)),
-                        y = unit(theLegend$pos, "native") - unit(0.5, "native"),
-                        pch = theSymbols,
-                        size = unit(max(theme@vector$pointsize), "char"),
-                        name = "legend_items")
-
-          } else if(theParam %in% c("linewidth")){
-
-            theWidths <- sort(unique(unlist(obj$params[theParam], use.names = FALSE)))[theLegend$pos]
-            grid.polyline(x = rep(unit(c(1, 1), "npc") + unit.c(pnl$legendX[j], pnl$legendX[j] + unit(10, "points")), times = length(theLegend$pos)),
-                          y = unit(rep(theLegend$pos, each = 2), "native") - unit(0.5, "native"),
-                          id = rep(theLegend$pos, each = 2),
-                          name = "legend_items",
-                          gp = gpar(col = theme@vector$linecol[1],
-                                    lwd = theWidths,
-                                    lty = theme@vector$linetype[1]))
-
-          } else if(theParam %in% c("linetype")){
-
-            theTypes <- sort(unique(unlist(obj$params[theParam], use.names = FALSE)))[theLegend$pos]
-            grid.polyline(x = rep(unit(c(1, 1), "npc") + unit.c(pnl$legendX[j], pnl$legendX[j] + unit(10, "points")), times = length(theLegend$pos)),
-                          y = unit(rep(theLegend$pos, each = 2), "native") - unit(0.5, "native"),
-                          id = rep(theLegend$pos, each = 2),
-                          name = "legend_items",
-                          gp = gpar(col = theme@vector$linecol[1],
-                                    lwd = max(theme@vector$linewidth),
-                                    lty = theTypes))
-
-          }
-
-          if(theme@legend$label$plot){
-            grid.text(label = unlist(theLegend[legendName], use.names = FALSE),
-                      x = unit(1, "npc") + pnl$legendX[j] + unit(15, "points"),
-                      y = unit(theLegend$pos, "native") - unit(0.5, "native"),
-                      name = "legend_labels",
-                      just = c("left"),
-                      gp = gpar(fontsize = theme@legend$label$fontsize,
-                                col = theme@legend$label$colour))
-          }
-
-          # also include title for that legend
-
-          upViewport() # exit current legend
+                    label = theTheme@xAxis$label$title,
+                    rot = theTheme@xAxis$label$rotation,
+                    name = "x_title",
+                    gp = gpar(fontsize = theTheme@xAxis$label$fontsize,
+                              col = theTheme@xAxis$label$colour))
         }
 
-        upViewport() # exit legend
+        if(theTheme@xAxis$ticks$plot){
+          grid.text(label = as.character(round(theLayout$grid$xMaj, theTheme@yAxis$ticks$digits)),
+                    x = unit(theLayout$grid$xMaj, "native"),
+                    y = unit(1, "npc") - unit(theLayout$labels$xAxisTicksH, "points"),
+                    just = "bottom",
+                    rot = theTheme@xAxis$ticks$rotation,
+                    name = "x_tick_labels",
+                    gp = gpar(fontsize = theTheme@xAxis$ticks$fontsize,
+                              col = theTheme@xAxis$ticks$colour))
+        }
+        upViewport() # exit xAxisVP
       }
+      # end_time <- Sys.time()
+      # timings <- bind_rows(timings, tibble(activity = "plot margin", duration = end_time - start_time))
 
-      # the grid viewport
-      pushViewport(viewport(xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                            yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                            name = "grid"))
-      grid.rect(gp = gpar(col = NA, fill = NA), name = "gridGrob")
+      # ... the legend viewport ----
+      # start_time <- Sys.time()
+      if(theTheme@legend$plot){
+        pushViewport(legendVP)
+        # grid.rect(gp = gpar(col = "violet", fill = NA))
+        pushViewport(legBoxVP)
 
-      # the box viewport
-      if(theme@box$plot){
-        pushViewport(viewport(width = unit(1, "npc") - unit(2*pnl$xMargin, "native"),
-                              height = unit(1, "npc") - unit(2*pnl$yMargin, "native"),
-                              name = "box"))
-        grid.rect(gp = gpar(fill = theme@box$fillcol,
-                            col = theme@box$linecol,
-                            lwd = theme@box$linewidth,
-                            lty = theme@box$linetype),
-                  name = "theBox")
-        upViewport() # exit box
+        for(j in seq_along(theLegend)){
+          grid.draw(theLegend[[j]])
+        }
+
+        upViewport() # exit legBoxVP
+        upViewport() # exit legendVP
       }
+      # end_time <- Sys.time()
+      # timings <- bind_rows(timings, tibble(activity = "plot legend", duration = end_time - start_time))
 
-      # the grid viewport
-      if(theme@grid$plot){
+      # ... the plot viewport ----
+      # start_time <- Sys.time()
+      pushViewport(plotVP)
 
+      if(theTheme@grid$plot){
         # plot the major grid viewport
-        pushViewport(viewport(xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                              yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                              name = "majorGrid"))
-
-        grid.grill(h = unit(pnl$yMajGrid, "native"),
-                   v = unit(pnl$xMajGrid, "native"),
-                   gp = gpar(col = theme@grid$colour,
-                             lwd = theme@grid$linewidth,
-                             lty = theme@grid$linetype))
-        upViewport() # exit majorGrid
+        grid.grill(h = unit(theLayout$grid$yMaj, "native"),
+                   v = unit(theLayout$grid$xMaj, "native"),
+                   gp = gpar(col = theTheme@grid$colour,
+                             lwd = theTheme@grid$linewidth,
+                             lty = theTheme@grid$linetype))
 
         # plot the minor grid
-        if(theme@grid$minor){
-          pushViewport(viewport(xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                                yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                                name = "minorGrid"))
-
-          grid.grill(h = unit(pnl$yMinGrid, "native"),
-                     v = unit(pnl$xMinGrid, "native"),
-                     gp = gpar(col = theme@grid$colour,
-                               lwd = theme@grid$linewidth/2,
-                               lty = theme@grid$linetype))
-          upViewport() # exit minorGrid
+        if(theTheme@grid$minor & theType != "grid"){
+          grid.grill(h = unit(theLayout$grid$yMin, "native"),
+                     v = unit(theLayout$grid$xMin, "native"),
+                     gp = gpar(col = theTheme@grid$colour,
+                               lwd = theTheme@grid$linewidth/2,
+                               lty = theTheme@grid$linetype))
         }
       }
-      upViewport() # exit grid
 
-      # the object viewport
-      pushViewport(viewport(xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                            yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                            name = "object"))
-      grid.rect(gp = gpar(col = NA, fill = NA), name = "objectGrob")
+      pushViewport(boxVP)
+      if(theTheme@box$plot){
 
-      if(obj$type == "raster"){
-        pushViewport(viewport(width = unit(1, "npc") - unit(2 * pnl$xMargin, "native") + unit(theme@box$linewidth, "points"),
-                              height = unit(1, "npc") - unit(2 * pnl$yMargin, "native") + unit(theme@box$linewidth, "points"),
-                              xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                              yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                              name = "raster"))
-        grid.clip(width = unit(1, "npc"),
-                  height = unit(1, "npc"))
-        grid.raster(x = unit(0, "npc") - unit(pnl$xWindowOffset, "npc") * pnl$xFactor,
-                    y = unit(0, "npc") - unit(pnl$yWindowOffset, "npc") * pnl$yFactor,
-                    width = unit(pnl$xFactor, "npc"),
-                    height = unit(pnl$yFactor, "npc"),
-                    hjust = 0,
-                    vjust = 0,
-                    image = matrix(data = obj$values, nrow = obj$rows, ncol = obj$cols, byrow = TRUE),
-                    name = "theRaster",
-                    interpolate = FALSE)
-      } else if(obj$type == "vector") {
-        pushViewport(viewport(width = unit(1, "npc") - unit(2 * pnl$xMargin, "native") + unit(theme@box$linewidth, "points"),
-                              height = unit(1, "npc") - unit(2 * pnl$yMargin, "native") + unit(theme@box$linewidth, "points"),
-                              xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                              yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                              name = "vector"))
-        if(clip){
-          grid.clip(width = unit(1, "npc") + unit(theme@box$linewidth, "points"),
-                    height = unit(1, "npc") + unit(theme@box$linewidth, "points"))
+        if(theType == "grid"){
+          grid.clip(width = unit(1, "npc"),
+                    height = unit(1, "npc"))
+          grid.draw(theGrob)
+        } else {
+          if(clip){
+            grid.clip(width = unit(1, "npc") + unit(theTheme@box$linewidth, "points"),
+                      height = unit(1, "npc") + unit(theTheme@box$linewidth, "points"))
+          }
+          grid.draw(theGrob)
         }
-        grid.draw(obj$out)
-      }
-      upViewport() # exit 'object'
 
-      upViewport(3) # exit the object 'viewport' and 'plot' and 'obj$name'
+        upViewport() # exit boxVP
+      }
+
+      upViewport() # exit plotVP
+      upViewport() # exit layoutVP
+      upViewport() # exit 'theName'VP
+
+      # end_time <- Sys.time()
+      # timings <- bind_rows(timings, tibble(activity = "plot object", duration = end_time - start_time))
 
     } else {
 
-      downViewport(panelNames[i])
-      downViewport("plot")
-      pushViewport(viewport(xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                            yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                            name = "grid"))
+      # prepare the object for plotting ----
+      # start_time <- Sys.time()
+      prev <- grid.get(gPath("extentGrob"), global = TRUE)
+      if(is(prev) == "gList"){
+        prev <- prev[[i]]
+      }
+      theWindow <- .testWindow(x = tibble(x = c(as.numeric(prev$x), as.numeric(prev$x) + as.numeric(prev$width)),
+                                          y = c(as.numeric(prev$y), as.numeric(prev$y) + as.numeric(prev$height))))
+      theTheme <- theme
+      theTheme@legend$plot <- FALSE
 
-      pushViewport(viewport(width = unit(1, "npc") - unit(2 * pnl$xMargin, "native"),
-                            height = unit(1, "npc") - unit(2 * pnl$yMargin, "native"),
-                            xscale = c(pnl$minPlotX - pnl$xMargin, pnl$maxPlotX + pnl$xMargin),
-                            yscale = c(pnl$minPlotY - pnl$yMargin, pnl$maxPlotY + pnl$yMargin),
-                            name = "geom"))
+      if(panelNames[i] == "sketching"){
+        theTheme@title$plot <- FALSE
+      }
+      temp <- .makePlot(x = theObject, window = theWindow, theme = theTheme, ...)
+      theGrob <- temp$grob
+      # end_time <- Sys.time()
+      # timings <- bind_rows(timings, tibble(activity = "make object", duration = end_time - start_time))
+
+      downViewport(panelNames[i])
+      downViewport("box")
 
       if(clip){
         grid.clip(width = unit(1, "npc") + unit(theme@box$linewidth, "points"),
                   height = unit(1, "npc") + unit(theme@box$linewidth, "points"))
       }
-      grid.draw(obj$out)
-
-      upViewport(4)
+      grid.draw(theGrob)
+      upViewport()
+      upViewport()
+      upViewport()
+      upViewport()
     }
 
     if(trace){
 
-      theHist <- getHistory(x = objects[[i]])
+      theHist <- getHistory(x = theObject)
 
       if(!is.null(theHist)){
         histMsg <- paste0("this object has the following history:\n -> ", paste0(theHist, collapse = "\n -> "))
@@ -501,7 +447,12 @@ visualise <- function(..., layer = NULL, window = NULL, theme = gtTheme, trace =
   }
   upViewport() # exit 'geometr'
 
+
+  # end_overall <- Sys.time()
+  # timings <- bind_rows(timings, tibble(activity = "overall time", duration = end_overall - start_overall))
+
   invisible(recordPlot(attach = "geometr"))
+  # return(timings)
 }
 
 #' Create a new theme
@@ -532,18 +483,19 @@ visualise <- function(..., layer = NULL, window = NULL, theme = gtTheme, trace =
 #'   grid and whether or not to plot the \code{minor = TRUE/FALSE} grid.
 #' @param legend [\code{named list(.)}]\cr \code{plot = TRUE/FALSE}, number of
 #'   \code{bins}, \code{ascending = TRUE/FALSE} order of values and the
-#'   \code{sizeRatio} of plot and legend, \cr\cr label [\code{named list(.)}]\cr
-#'   \code{plot = TRUE/FALSE}, \code{fontsize} and \code{colour} of the legend
-#'   labels, \cr\cr box [\code{named list(.)}]\cr \code{plot = TRUE/FALSE},
-#'   \code{linetype}, \code{linewidth} and \code{colour} of the legend box.
+#'   \code{sizeRatio} of legend/plot size, \cr\cr label [\code{named
+#'   list(.)}]\cr \code{plot = TRUE/FALSE}, \code{fontsize} and \code{colour} of
+#'   the legend labels, \cr\cr box [\code{named list(.)}]\cr \code{plot =
+#'   TRUE/FALSE}, \code{linetype}, \code{linewidth} and \code{colour} of the
+#'   legend box.
 #' @param scale [\code{named list(.)}]\cr \code{param = 'someParameter'} and
-#'   \code{to = 'someAttribute'} to which to scale 'someParameter' to. Whether
-#'   or not to use the values' \code{identity}, the value \code{range} that
-#'   shall be represented by the scale and the number of \code{bins}.
-#' @param vector [\code{named list(.)}]\cr \code{linecol}, \code{fillcol},
+#'   \code{to = 'someAttribute'} specifying which parameter shall be scale to
+#'   which attribute, the value \code{range} that shall be represented by the
+#'   scale, the number of \code{bins} into which the values shall be classified
+#'   and the number of \code{maxPixels}.
+#' @param parameters [\code{named list(.)}]\cr \code{linecol}, \code{fillcol},
 #'   \code{missingcol}, \code{linetype}, \code{linewidth}, \code{pointsize} and
-#'   \code{pointsymbol} of a vector object.
-#' @param raster [ \code{named list(.)}]\cr \code{fillcol} of a raster object.
+#'   \code{pointsymbol} of the plot object.
 #' @examples
 #' input <- gtRasters$continuous
 #' (myTheme <- setTheme(title = list(plot = FALSE)))
@@ -554,7 +506,7 @@ visualise <- function(..., layer = NULL, window = NULL, theme = gtTheme, trace =
 
 setTheme <- function(from = NULL, title = NULL, box = NULL, xAxis = NULL,
                      yAxis = NULL, grid = NULL, legend = NULL, scale = NULL,
-                     vector = NULL, raster = NULL){
+                     parameters = NULL){
 
   assertClass(x = from, classes = "gtTheme", null.ok = TRUE)
   if(is.null(from)){
@@ -685,28 +637,19 @@ setTheme <- function(from = NULL, title = NULL, box = NULL, xAxis = NULL,
 
   assertList(scale, any.missing = FALSE, max.len = 5, null.ok = TRUE)
   if(!is.null(scale)){
-    assertNames(names(scale), subset.of = c("param", "to", "identity", "range", "bins"))
+    assertNames(names(scale), subset.of = c("param", "to", "identity", "range", "bins", "maxPoxels"))
     previous <- from@scale
     for(i in seq_along(names(scale))){
       out@scale[which(names(previous) == names(scale)[i])] <- scale[i]
     }
   }
 
-  assertList(vector, any.missing = FALSE, max.len = 7, null.ok = TRUE)
-  if(!is.null(vector)){
-    assertNames(names(vector), subset.of = c("linecol", "fillcol", "missingcol", "linetype", "linewidth", "pointsize", "pointsymbol"))
-    previous <- from@vector
-    for(i in seq_along(names(vector))){
-      out@vector[which(names(previous) == names(vector)[i])] <- vector[i]
-    }
-  }
-
-  assertList(raster, any.missing = FALSE, max.len = 2, null.ok = TRUE)
-  if(!is.null(raster)){
-    assertNames(names(raster), subset.of = c("fillcol"))
-    previous <- from@raster
-    for(i in seq_along(names(raster))){
-      out@raster[which(names(previous) == names(raster)[i])] <- raster[i]
+  assertList(parameters, any.missing = FALSE, max.len = 7, null.ok = TRUE)
+  if(!is.null(parameters)){
+    assertNames(names(parameters), subset.of = c("colours", "missingcol", "linetype", "linewidth", "pointsize", "pointsymbol"))
+    previous <- from@parameters
+    for(i in seq_along(names(parameters))){
+      out@parameters[which(names(previous) == names(parameters)[i])] <- parameters[i]
     }
   }
 

@@ -1,19 +1,20 @@
 #' Get the table of group attributes
 #'
-#' Get tabular information of the attributes of groups of features.
 #' @param x the object from which to derive the attribute table.
-#' @param ... subset based on logical predicates defined in terms of the
-#'   columns in \code{x} or a vector of booleans. Multiple conditions are
-#'   combined with \code{&}. Only rows where the condition evaluates to TRUE are kept.
-#' @return A table of the group attributes of \code{x} or an object where the
-#'   groups table has been subsetted.
+#' @details This table contains at least the column 'gid'.
+#'
+#'   When this function is called on "ANY" object, it is first tested whether
+#'   that object has features (\code{\link{getFeatures}}), from which the groups
+#'   can be reconstructed. If this is not the case, \code{NULL} is returned.
+#' @return A tibble (or a list of tibbles per layer) of the group attributes of
+#'   \code{x}.
 #' @family getters
 #' @examples
 #' getGroups(x = gtGeoms$polygon)
 #'
 #' # for raster objects, groups are pixels with the same value and their
 #' # attributes are in the raster attribute table (RAT)
-#' getGroups(x = gtRasters$categorical)
+#' getGroups(x = gtRasters)
 #' @name getGroups
 #' @rdname getGroups
 NULL
@@ -24,7 +25,7 @@ NULL
 #' @export
 if(!isGeneric("getGroups")){
   setGeneric(name = "getGroups",
-             def = function(x, ...){
+             def = function(x){
                standardGeneric("getGroups")
              }
   )
@@ -35,8 +36,13 @@ if(!isGeneric("getGroups")){
 #' @export
 setMethod(f = "getGroups",
           signature = "ANY",
-          definition = function(x, ...){
-            NULL
+          definition = function(x){
+            theFeatures <- getFeatures(x = x)
+            if(!is.null(theFeatures)){
+              tibble(gid = sortUniqueC(theFeatures$gid))
+            } else {
+              theFeatures
+            }
           }
 )
 
@@ -46,57 +52,40 @@ setMethod(f = "getGroups",
 #' @export
 setMethod(f = "getGroups",
           signature = "geom",
-          definition = function(x, ...){
+          definition = function(x){
 
-            theType <- getType(x = x)[2]
+            theType <- getType(x = x)[1]
 
-            if(length(exprs(...)) > 0){
-              out <- x
-              subset <- enquos(...)
-              isLogical <- tryCatch(is.logical(eval_tidy(expr = subset[[1]])), error = function(e) FALSE)
-              thePoints <- getPoints(x = x)
-              theFeatures <- getFeatures(x = x)
-              theGroups <- getGroups(x = x)
-              if(isLogical){
-                matches <- eval_tidy(expr = subset[[1]])
-              } else {
-                subset <- exprs(...)
-                matches <- eval(parse(text = subset), envir = theGroups)
-              }
-              theGroups <- theGroups[matches,]
-              theFeatures <- theFeatures[theFeatures$gid %in% theGroups$gid,]
-              thePoints <- thePoints[thePoints$fid %in% theFeatures$fid,]
+            if(theType == "grid"){
+              theNames <- getNames(x = x)
+              theFeatures <- getFeatures(x)
+              theGroups <- x@group
 
-              out <- new(Class = "geom",
-                         type = theType,
-                         point = thePoints,
-                         feature = list(geometry = theFeatures),
-                         group = list(geometry = theGroups),
-                         window = getWindow(x = x),
-                         scale = "absolute",
-                         crs = getCRS(x = x),
-                         history = getHistory(x = x))
-            } else {
+              out <- NULL
+              for(i in seq_along(theNames)){
+                vals <- unlist(theFeatures[theNames[i]], use.names=F)
+                if(is.numeric(vals)){
+                  sbs <- sortUniqueC(vals)
 
-              if(theType == "grid"){
-                theGroups <- x@group
-                out <- list()
-                for(i in seq_along(theGroups)){
-                  theInput <- theGroups[[i]]
-                  theName <- names(theGroups)[i]
-                  if(length(theGroups) > 1){
-                    out <- c(out, setNames(list(theInput), theName))
+                  if(all(sbs %in% theGroups$gid)){
+                    tab <- theGroups[theGroups$gid %in% sbs,]
                   } else {
-                    if(dim(theInput)[1] == 0){
-                      out <- theGroups[[1]]
-                    } else {
-                      out <- theInput
-                    }
+                    tab <- tibble(gid = sbs)
                   }
+                } else {
+                  tab <- tibble(gid = integer())
                 }
-              } else {
-                out <- x@group$geometry
+
+                if(length(theNames) > 1){
+                  out <- c(out, setNames(list(tab), theNames[i]))
+                } else {
+                  out <- tab
+                }
+
               }
+
+            } else {
+              out <- x@group
             }
 
             return(out)
@@ -110,26 +99,27 @@ setMethod(f = "getGroups",
 setMethod(f = "getGroups",
           signature = "Raster",
           definition = function(x){
-            if(length(x@data@attributes) == 0){
+            if(class(x) == "RasterBrick"){
               out <- tibble(gid = integer())
-            } else{
-              names <- names(x@data@attributes[[1]])
-              names[which(names == "id")] <- "gid"
-              out <- as_tibble(x@data@attributes[[1]])
-              names(out) <- names
+            } else {
+              out <- NULL
+              for(i in 1:dim(x)[3]){
+                temp <- x[[i]]@data@attributes
+                if(length(temp) != 0){
+                  names <- names(temp[[1]])
+                  names[which(names == "id")] <- "gid"
+                  tab <- as_tibble(temp[[1]])
+                  names(tab) <- names
+                } else {
+                  tab <- tibble(gid = integer())
+                }
+                if(dim(x)[3] == 1){
+                  out <- tab
+                } else {
+                  out <- c(out, setNames(list(tab), names(x)[i]))
+                }
+              }
             }
             return(out)
-          }
-)
-
-# master ----
-#' @rdname getGroups
-#' @importFrom tibble tibble as_tibble
-#' @export
-setMethod(f = "getGroups",
-          signature = "matrix",
-          definition = function(x){
-            vals <- sort(unique(as.vector(x = x)))
-            tibble(gid = seq_along(vals), values = vals)
           }
 )

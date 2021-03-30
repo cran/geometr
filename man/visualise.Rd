@@ -2,68 +2,56 @@
 % Please edit documentation in R/visualise.R
 \name{visualise}
 \alias{visualise}
-\title{Visualise raster and geom objects}
+\title{Visualise geometric objects}
 \usage{
 visualise(
   ...,
-  layer = NULL,
   window = NULL,
-  theme = gtTheme,
   trace = FALSE,
-  image = FALSE,
   new = TRUE,
-  clip = TRUE
+  clip = TRUE,
+  theme = gtTheme
 )
 }
 \arguments{
 \item{...}{objects to plot and optional graphical parameters.}
 
-\item{layer}{[\code{integerish(.)} | \code{character(.)}]\cr in case the
-objects to plot have several layers, this is the name or index of the
-layer(s) that shall be plotted.}
-
 \item{window}{[\code{data.frame(1)}]\cr two opposing corners of a rectangle
 to which the plot is limited.}
 
-\item{theme}{[\code{list(7)}]\cr visualising options; see
-\code{\link{setTheme}} for details.}
-
-\item{trace}{[\code{logical(1)}]\cr Print the raster object's history (i.e.
-the process according to which it has been created) (\code{TRUE}), or
-simply plot the object (\code{FALSE}, default).}
-
-\item{image}{[\code{logical(1)}]\cr set this to \code{TRUE} if \code{raster}
-is actually an image; see Details.}
+\item{trace}{[\code{logical(1)}]\cr Print the provenance information of the
+geometric object (if available) (\code{TRUE}), or simply plot the object
+(\code{FALSE}, default).}
 
 \item{new}{[\code{logical(1)}]\cr force a new plot (\code{TRUE}, default).}
 
 \item{clip}{[\code{logical(1)}]\cr clip the plot by the plot box
-(\code{TRUE}, default), or plot all of the objects.}
+(\code{TRUE}, default), or plot also objects that go beyond the plot box.}
+
+\item{theme}{[\code{list(7)}]\cr the theme from which to take graphical
+parameters; see \code{\link{setTheme}} for details.}
 }
 \value{
 Returns invisibly an object of class \code{recordedplot}, see
   \code{\link{recordPlot}} for details (and warnings).
 }
 \description{
-Visualise raster and geom objects
-}
-\details{
-In case you want to plot an image (similar to
-  \code{\link[raster]{plotRGB}}), you either have to: \enumerate{ \item
-  provide a \code{RasterStack} with the three layers \code{red}, \code{green}
-  and \code{blue} or \item provide a matrix with hexadecimal colour values
-  (e.g. '#000000')} and set \code{image = TRUE}.
+Visualise geometric objects
 }
 \examples{
+# make an empty plot
+visualise()
+visualise(window = getExtent(gtRasters$continuous))
+
 coords <- data.frame(x = c(30, 60, 60, 40),
                      y = c(40, 40, 60, 70),
                      fid = 1)
 (aGeom <- gs_polygon(anchor = coords))
 visualise(aGeom)
 
-window <- data.frame(x = c(0, 80),
-                     y = c(0, 80))
-withWindow <- setWindow(x = aGeom, to = window)
+win <- data.frame(x = c(0, 80),
+                  y = c(0, 80))
+withWindow <- setWindow(x = aGeom, to = win)
 visualise(expanded = withWindow)
 
 (aRaster <-  gtRasters$categorical)

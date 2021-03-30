@@ -4,7 +4,6 @@
 \alias{gc_geom}
 \alias{gc_geom,Spatial-method}
 \alias{gc_geom,sf-method}
-\alias{gc_geom,ppp-method}
 \alias{gc_geom,Raster-method}
 \title{Transform a spatial object to class \code{geom}}
 \usage{
@@ -12,19 +11,29 @@
 
 \S4method{gc_geom}{sf}(input = NULL, group = FALSE, ...)
 
-\S4method{gc_geom}{ppp}(input = NULL, ...)
-
-\S4method{gc_geom}{Raster}(input = NULL, ...)
+\S4method{gc_geom}{Raster}(input = NULL, stack = FALSE, group = FALSE, as_hex = FALSE, ...)
 }
 \arguments{
 \item{input}{the object to transform to class \code{geom}.}
 
 \item{...}{additional arguments.}
 
-\item{group}{[\code{logical(1)}]\cr should the attributes of multi* features
-be grouped, i.e. should the unique values per multi* feature be assigned
-into the groups table (\code{TRUE}), or should they be kept as duplicated
-per-feature attributes (\code{FALSE}, default)?}
+\item{group}{[\code{logical(1)}]\cr should the values of a Raster* or the
+attributes of MULTI* features be grouped, i.e., should the unique values be
+assigned into the groups table (\code{TRUE})? The default behaviour for
+Raster* would be not to assign values into the group attribute table if no
+RAT is available and for MULTI* features it would be to keep the attributes
+as duplicated per-feature attributes (\code{FALSE})?}
+
+\item{stack}{[\code{logical(1)}]\cr should the layers of gridded objects be
+stacked, i.e., should several layers be stored as columns in the attribute
+table of features of one geom (\code{TRUE}, default), or should they be
+stored in (a list of) several geoms separately (\code{FALSE})?}
+
+\item{as_hex}{[\code{logical(1)}]\cr should the bands 'red', 'green' and
+'blue' of a gridded object be transformed to hexadecimal values
+(\code{TRUE}), or should they be retained as columns in a stacked grid geom
+(\code{FALSE}, default)?.}
 }
 \value{
 an object of class \code{geom}
@@ -32,17 +41,34 @@ an object of class \code{geom}
 \description{
 Transform a spatial object to class \code{geom}
 }
-\examples{
-gc_geom(input = gtPPP)
+\details{
+When transforming a simple feature to a geom, all MULTI* features
+  are organised on a per feature basis, where the attribute table of features
+  in the geom contains those variables that are valid for each feature, while
+  the attribute table of groups contains those variables, that are unique
+  only at the level of groups of features (i.e., at the level of MULTI*
+  simple features). Those variables that are valid at the level of groups
+  would be duplicated in the attribute table of features. When a MULTI*
+  feature is transformed to a geom, the default behaviour is to copy the
+  simple feature as closely as possible. However, to reduce the object size
+  (and improve its' organisation), it is possible to assign the attributes of
+  groups into the attribute table of groups of the geom by setting
+  \code{group = TRUE}.
 
+  When transforming a Raster* (or possibly other gridded classes) with
+  several layers to a geom, the layers are by default organised into a list
+  with a layer per list item. However, when several layers contain
+  fundamentally the same data (i.e., values that are associated to the same
+  groups), layers could be stacked \code{stack = TRUE}, because they share
+  the same group attribute table.
+}
+\examples{
 gc_geom(input = gtSF$polygon)
 
 gc_geom(input = gtRasters$categorical)
 }
 \seealso{
 Other spatial classes: 
-\code{\link{gc_grob}()},
-\code{\link{gc_ppp}()},
 \code{\link{gc_raster}()},
 \code{\link{gc_sf}()},
 \code{\link{gc_sp}()}

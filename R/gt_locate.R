@@ -21,19 +21,23 @@
 #' @return A \code{tibble} of the selected locations and, if \code{identify
 #'   = TRUE}, the respective values. If \code{show = TRUE} the values are also
 #'   shown in the plot.
+#' @family geometry tools
 #' @examples
-#' \donttest{
-#' # locate coordinates with geoms
-#' visualise(geom = gtGeoms$polygon)
-#' gt_locate(samples = 2)
+#' if(dev.interactive()){
 #'
-#' # locate or identify values with rasters
-#' visualise(raster = gtRasters$continuous)
-#' gt_locate(identify = TRUE, snap = TRUE)
+#'   # locate coordinates with geoms
+#'   visualise(geom = gtGeoms$polygon)
+#'   gt_locate(samples = 2)
 #'
-#' # with several panels, specify a target
-#' visualise(gtRasters)
-#' gt_locate(samples = 4, panel = "categorical", snap = TRUE, identify = TRUE)
+#'   # locate or identify values with rasters
+#'   visualise(raster = gtRasters$continuous)
+#'   gt_locate(identify = TRUE, snap = TRUE)
+#'
+#'   # with several panels, specify a target
+#'   visualise(gtRasters)
+#'   gt_locate(samples = 4, panel = "categorical",
+#'             snap = TRUE, identify = TRUE)
+#'
 #' }
 #' @importFrom checkmate assertIntegerish assertCharacter assertLogical
 #' @importFrom grDevices dev.list
@@ -62,15 +66,15 @@ gt_locate <- function(samples = 1, panel = NULL, identify = FALSE, snap = FALSE,
       stop("please create a plot with geometr::visualise()")
     }
 
-    panelNames <- objViewports$name[objViewports$vpDepth == 2 & objViewports$name != "1"]
+    panelNames <- objViewports$name[objViewports$vpDepth == unique(objViewports$vpDepth[which(objViewports$name == "geometr")]) + 1 & objViewports$name != "1"]
     panelNames <- panelNames[!duplicated(panelNames)]
   } else{
     stop("please create a plot with geometr::visualise()")
   }
 
   isLegendInPlot <- !identical(grid.grep("legend", grobs = FALSE, viewports = TRUE, grep = TRUE), character(0))
-  isRasterInPlot <- !identical(grid.grep("::plot::object::raster", grobs = FALSE, viewports = TRUE, grep = TRUE), character(0))
-  isVectorInPlot <- !identical(grid.grep("::plot::object::vector", grobs = FALSE, viewports = TRUE, grep = TRUE), character(0))
+  isRasterInPlot <- !identical(grid.grep("grid", grobs = FALSE, viewports = TRUE, grep = TRUE), character(0))
+  isVectorInPlot <- !identical(grid.grep("point|line|polygon", grobs = FALSE, viewports = TRUE, grep = TRUE), character(0))
 
   # get the panel in which locations should be determined
   if(is.null(panel)){
@@ -82,13 +86,13 @@ gt_locate <- function(samples = 1, panel = NULL, identify = FALSE, snap = FALSE,
     panel <- panelNames[grepl(panel, panelNames)]
     if(length(panel) == 0){
       panel <- panelNames[1]
-      warning("the specified panel did not match any of the existing panels, please select locations in the first panel.", immediate. = TRUE, call. = FALSE)
+      warning("the specified panel did not match any of the existing panels (", paste0(panelNames, collapse = ", "), "), please select locations in the first panel.", immediate. = TRUE, call. = FALSE)
     }
   }
 
   # find the correct viewport to limit actions to this area of the plot
   if(isRasterInPlot){
-    rasterVpPath <- grid.grep(paste0(panel, "::plot::object::raster"), grobs = FALSE, viewports = TRUE, grep = TRUE)
+    rasterVpPath <- grid.grep(paste0(panel, "::theLayout::grid"), grobs = FALSE, viewports = TRUE, grep = TRUE)
     seekViewport(rasterVpPath)
 
     metaRaster <- grid.get(gPath("theRaster"), global = TRUE)
@@ -102,13 +106,13 @@ gt_locate <- function(samples = 1, panel = NULL, identify = FALSE, snap = FALSE,
     snap <- FALSE
   }
   if(isVectorInPlot){
-    vectorVpPath <- grid.grep(paste0(panel, "::plot::object::vector"), grobs = FALSE, viewports = TRUE, grep = TRUE)
+    vectorVpPath <- grid.grep(paste0(panel, "::theLayout::point|line|polygon::box"), grobs = FALSE, viewports = TRUE, grep = TRUE)
     seekViewport(vectorVpPath)
   }
 
   extentGrobMeta <- grid.get(gPath("extentGrob"))
-  panelExt <- tibble(x = c(0, as.numeric(extentGrobMeta$width)) + as.numeric(extentGrobMeta$x),
-                     y = c(0, as.numeric(extentGrobMeta$height)) + as.numeric(extentGrobMeta$y))
+  panelExt <- tibble(x = c(as.numeric(extentGrobMeta$x), as.numeric(extentGrobMeta$width)) + as.numeric(extentGrobMeta$x),
+                     y = c(as.numeric(extentGrobMeta$y), as.numeric(extentGrobMeta$height)) + as.numeric(extentGrobMeta$y))
 
   if(snap){
     theGrid <- tibble(x = rep(seq(panelExt$x[1] + 0.5, panelExt$x[2], 1), times = panelExt$y[2]),
@@ -143,7 +147,7 @@ gt_locate <- function(samples = 1, panel = NULL, identify = FALSE, snap = FALSE,
                        row = ceiling(values[2]))
     }
 
-    temp <- tibble(id = i, x = values[1], y = values[2])
+    temp <- tibble(fid = i, x = values[1], y = values[2])
 
     if(raw){
       temp <- bind_cols(temp, matPos)
@@ -172,14 +176,15 @@ gt_locate <- function(samples = 1, panel = NULL, identify = FALSE, snap = FALSE,
       } else if(isVectorInPlot){
 
         theVal <- plotVal <- NA
-        for(i in seq_along(unique(theValues))){
-          geom <- grid.get(gPath(as.character(i)), global = TRUE)
+        for(j in seq_along(unique(theValues))){
+          geom <- grid.get(gPath(as.character(j)), global = TRUE)
+          geom <- matrix(data = c(geom$x, geom$y, geom$pathId), ncol = 3)
           inside <- pointInGeomC(vert = matrix(data = c(values[1], values[2]), ncol = 2),
-                                 geom = matrix(data = c(geom$x, geom$y), ncol = 2),
+                                 geom = geom[which(geom[,3] == j), c(1, 2)],
                                  invert = FALSE)
           if(inside >= 1){
-            theVal <- i
-            plotVal <- i
+            theVal <- j
+            plotVal <- j
             break
           }
         }
@@ -224,7 +229,7 @@ gt_locate <- function(samples = 1, panel = NULL, identify = FALSE, snap = FALSE,
     out <- bind_rows(out, temp)
 
   }
-  upViewport(5)
+  upViewport(4)
 
   return(out)
 }

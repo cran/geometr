@@ -6,7 +6,6 @@
 \alias{getExtent,geom-method}
 \alias{getExtent,Spatial-method}
 \alias{getExtent,sf-method}
-\alias{getExtent,ppp-method}
 \alias{getExtent,Raster-method}
 \alias{getExtent,matrix-method}
 \title{Get the extent (bounding box) of a spatial object.}
@@ -19,8 +18,6 @@
 
 \S4method{getExtent}{sf}(x)
 
-\S4method{getExtent}{ppp}(x)
-
 \S4method{getExtent}{Raster}(x)
 
 \S4method{getExtent}{matrix}(x)
@@ -29,8 +26,9 @@
 \item{x}{the object from which to derive the extent.}
 }
 \value{
-A table of the lower left and upper right corner of the extent of
-  \code{x}.
+A tibble of the lower left and upper right corner coordinates of the
+  extent of \code{x}. This table two columns (x and y) and two rows (minimum
+  and maximum).
 }
 \description{
 Get the extent (bounding box) of a spatial object.
@@ -42,8 +40,6 @@ getExtent(x = gtSP$SpatialPolygons)
 
 getExtent(x = gtSF$multilinestring)
 
-getExtent(x = gtPPP)
-
 getExtent(x = gtRasters$categorical)
 
 getExtent(x = matrix(0, 3, 5))
@@ -51,13 +47,15 @@ getExtent(x = matrix(0, 3, 5))
 \seealso{
 Other getters: 
 \code{\link{getCRS}()},
+\code{\link{getCols}()},
 \code{\link{getFeatures}()},
 \code{\link{getGroups}()},
 \code{\link{getHistory}()},
-\code{\link{getLayer}()},
-\code{\link{getName}()},
+\code{\link{getLayers}()},
+\code{\link{getNames}()},
 \code{\link{getPoints}()},
 \code{\link{getRes}()},
+\code{\link{getRows}()},
 \code{\link{getType}()},
 \code{\link{getWindow}()}
 }

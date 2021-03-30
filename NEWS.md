@@ -1,3 +1,35 @@
+# geometr 0.2.8
+
+- `gs_point` now allows to create an empty geom that contains only "window" information.
+- `visualise` can now plot empty geoms, making use of their "window" information, to create an empty surface for sketching.
+- the option to use a `template` has been removed from all `gs_*` functions. The new workflow to sketch geoms is now either via an already open plot, or via a sketching surface (see above changes).
+- the window slot now only contains the lower left and upper right corner, instead of each coordinate of the rectangle.
+- removed function `gt_sketch`, as it is redundant.
+
+# geometr 0.2.7
+
+- included the `@extent`-slot for faster processing of large objects where it takes long to find min/max values of coordinates.
+- `getRes` now returns a vector, instead of a tibble
+- `getLayers` now returns all layers in a list (no subsetting more possible)
+- `getGroups` now returns for RasterLayers without a raster attribute table (RAT) an empty tibble.
+- `gc_geom` now only adds groups to the group attribute table in case the input raster actually contains a RAT.
+- print-method of `gtTheme` has been beautified (it now also shows whether an attribute is scaled to some parameter)
+- In case an object doesn't have any provenance information, `getHistory` now prints that this object has been loaded from memory.
+- all spatstat getters/setters (for class `ppp`) have been removed temporarily.
+
+# geometr 0.2.6
+
+- identifying and setting groups in gridded `geom`s has been refined. Several layers are by default stacked, but it is now also possible to create a list of separate `geom`s per layer with `gc_geom(..., stack = FALSE)`.
+- \"images\" are now handled by being able to create a grid geom with hexadecimal values by setting `gc_geom(..., as_hex = TRUE)`.
+- subsetting has been moved out of the respective getters into `gt_filter()`, it also includes subsetting x and y values of the 
+vertices.
+- pulling columns can now be done with `gt_pull()`.
+- new getters `getCols()`, `getRows()` and `getNames()`.
+- removed the `@scale`-slot from from the geom class, because it is no longer needed.
+- `visualise()` has been revised so that it fully supports plotting all geometric classes that have getters defined.
+- all previously existing `gt_*()` functions were revised so that they too support all geometric classes that have getters defined.
+- some code adaptions that come with those changes.
+
 # geometr 0.2.5
 
 - remove 'tiny map' from print method of grid geom

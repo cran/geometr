@@ -20,15 +20,13 @@ test_that("transform from sf to geom", {
   expect_class(output, classes = "geom")
   expect_true(output@type == "point")
   expect_data_frame(output@point, any.missing = FALSE, nrows = 8, ncols = 3)
-  expect_list(output@feature, any.missing = FALSE, names = "strict")
-  expect_data_frame(output@feature[[1]], any.missing = FALSE, nrows = 8, ncols = 3)
+  expect_data_frame(output@feature, any.missing = FALSE, nrows = 8, ncols = 3)
 
   output <- gc_geom(input, group = TRUE)
   expect_class(output, classes = "geom")
   expect_true(output@type == "point")
   expect_data_frame(output@point, any.missing = FALSE, nrows = 8, ncols = 3)
-  expect_list(x = output@group, any.missing = FALSE, len = 1)
-  expect_data_frame(output@group[[1]], any.missing = FALSE, nrows = 2, ncols = 2)
+  expect_data_frame(output@group, any.missing = FALSE, nrows = 2, ncols = 2)
 
   # test LINESTRING
   input <- gtSF$linestring
@@ -92,8 +90,7 @@ test_that("transform from sp to geom", {
   output <- gc_geom(input)
   expect_class(output, "geom")
   expect_true(output@type == "point")
-  expect_list(output@feature, any.missing = FALSE, names = "strict")
-  expect_data_frame(output@feature[[1]], any.missing = FALSE, nrows = 8, ncols = 3)
+  expect_data_frame(output@feature, any.missing = FALSE, nrows = 8, ncols = 3)
 
   # test 'SpatialLines'
   input <- gtSP$SpatialLines
@@ -109,8 +106,7 @@ test_that("transform from sp to geom", {
   output <- gc_geom(input)
   expect_class(output, "geom")
   expect_true(output@type == "line")
-  expect_list(output@feature, any.missing = FALSE, names = "strict")
-  expect_data_frame(output@feature[[1]], any.missing = FALSE, nrows = 2, ncols = 3)
+  expect_data_frame(output@feature, any.missing = FALSE, nrows = 2, ncols = 3)
 
   # test 'SpatialPolygons'
   input = gtSP$SpatialPolygons
@@ -125,8 +121,7 @@ test_that("transform from sp to geom", {
   output <- gc_geom(input)
   expect_class(output, "geom")
   expect_true(output@type == "polygon")
-  expect_list(output@feature, any.missing = FALSE, names = "strict")
-  expect_data_frame(output@feature[[1]], any.missing = FALSE, nrows = 2, ncols = 3)
+  expect_data_frame(output@feature, any.missing = FALSE, nrows = 2, ncols = 3)
 
   # test 'SpatialGrid'
   x = GridTopology(c(0,0), c(1,1), c(5,5))
@@ -165,8 +160,33 @@ test_that("transform from Raster to geom", {
   input <- gtRasters
 
   output <- gc_geom(input)
+  expect_list(x = output, len = 2)
+  expect_class(output$categorical, "geom")
+  expect_true(output$categorical@type == "grid")
+  expect_class(output$continuous, "geom")
+  expect_true(output$continuous@type == "grid")
+  expect_data_frame(x = output$continuous@group, nrows = 0)
+
+  # RasterStack with grouping
+  output <- gc_geom(input, group = TRUE)
+  expect_list(x = output, len = 2)
+  expect_class(output$categorical, "geom")
+  expect_true(output$categorical@type == "grid")
+  expect_class(output$continuous, "geom")
+  expect_true(output$continuous@type == "grid")
+  expect_data_frame(x = output$continuous@group, nrows = 91)
+
+  # RasterStack with stacking
+  output <- gc_geom(input, stack = TRUE)
   expect_class(output, "geom")
   expect_true(output@type == "grid")
+  expect_data_frame(x = output@group, nrows = 9)
+
+  # RasterStack with stacking and grouping
+  output <- gc_geom(input, stack = TRUE, group = TRUE)
+  expect_class(output, "geom")
+  expect_true(output@type == "grid")
+  expect_data_frame(x = output@group, nrows = 93)
 
   # RasterLayer
   input <- gtRasters$continuous
@@ -174,13 +194,11 @@ test_that("transform from Raster to geom", {
   output <- gc_geom(input)
   expect_class(output, "geom")
   expect_true(output@type == "grid")
-})
+  expect_data_frame(x = output@group, nrows = 0)
 
-test_that("transform from ppp to geom", {
-  # test 'SpatialPoints'
-  input <- gtPPP
-
-  output <- gc_geom(input)
+  # RasterLayer with grouping
+  output <- gc_geom(input, group = TRUE)
   expect_class(output, "geom")
-  expect_true(output@type == "point")
+  expect_true(output@type == "grid")
+  expect_data_frame(x = output@group, nrows = 91)
 })

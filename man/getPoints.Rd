@@ -6,58 +6,61 @@
 \alias{getPoints,geom-method}
 \alias{getPoints,Spatial-method}
 \alias{getPoints,sf-method}
-\alias{getPoints,ppp-method}
 \alias{getPoints,Raster-method}
 \alias{getPoints,matrix-method}
-\title{Get the table of point attributes}
+\title{Get the table of point coordinates}
 \usage{
-\S4method{getPoints}{ANY}(x, ...)
+\S4method{getPoints}{ANY}(x)
 
-\S4method{getPoints}{geom}(x, ...)
+\S4method{getPoints}{geom}(x)
 
 \S4method{getPoints}{Spatial}(x)
 
 \S4method{getPoints}{sf}(x)
-
-\S4method{getPoints}{ppp}(x)
 
 \S4method{getPoints}{Raster}(x)
 
 \S4method{getPoints}{matrix}(x)
 }
 \arguments{
-\item{x}{the object from which to derive the attribute table.}
-
-\item{...}{subset based on logical predicates defined in terms of the
-columns in \code{x} or a vector of booleans. Multiple conditions are
-combined with \code{&}. Only rows where the condition evaluates to TRUE are kept.}
+\item{x}{the object from which to derive the point coordinates.}
 }
 \value{
-A table of the point attributes of \code{x} or an object where the
-  point table has been subsetted.
+A tibble of the point coordinates of \code{x}.
 }
 \description{
-Get tabular information of the attributes of points (incl. coordinates).
+Get tabular information of the point coordinates.
+}
+\details{
+This table contains three columns (x, y and fid) and as many rows as
+  there are points. In case \code{x} is a polygon, the last point of each
+  distinct feature is a duplicate of its first point. In case \code{x} has
+  the type 'grid', all layers are summarised into one tibble, as several
+  layers must have the same extent and resolution, so that each point occurrs
+  in each layer, merely with a different, layer-specific value.
 }
 \examples{
 getPoints(x = gtGeoms$polygon)
 
 getPoints(x = gtGeoms$point)
 
-# for a raster object, the @point slot is extracted from its' compact storage
+# for raster objects, the @point slot is extracted from its compact form
 gtGeoms$grid$continuous@point
+
 getPoints(x = gtGeoms$grid$continuous)
 }
 \seealso{
 Other getters: 
 \code{\link{getCRS}()},
+\code{\link{getCols}()},
 \code{\link{getExtent}()},
 \code{\link{getFeatures}()},
 \code{\link{getGroups}()},
 \code{\link{getHistory}()},
-\code{\link{getLayer}()},
-\code{\link{getName}()},
+\code{\link{getLayers}()},
+\code{\link{getNames}()},
 \code{\link{getRes}()},
+\code{\link{getRows}()},
 \code{\link{getType}()},
 \code{\link{getWindow}()}
 }

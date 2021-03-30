@@ -22,16 +22,30 @@ A list of the events that lead to \code{x}.
 \description{
 Get the history of a spatial object.
 }
+\examples{
+library(tibble)
+library(magrittr)
+
+geom <- tibble(x = c(40, 70, 70, 50),
+               y = c(40, 40, 60, 70)) \%>\%
+  gs_polygon() \%>\%
+  gt_reflect(angle = 45)
+getHistory(x = geom)
+
+getHistory(x = gtRasters)
+}
 \seealso{
 Other getters: 
 \code{\link{getCRS}()},
+\code{\link{getCols}()},
 \code{\link{getExtent}()},
 \code{\link{getFeatures}()},
 \code{\link{getGroups}()},
-\code{\link{getLayer}()},
-\code{\link{getName}()},
+\code{\link{getLayers}()},
+\code{\link{getNames}()},
 \code{\link{getPoints}()},
 \code{\link{getRes}()},
+\code{\link{getRows}()},
 \code{\link{getType}()},
 \code{\link{getWindow}()}
 }

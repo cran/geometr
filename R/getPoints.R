@@ -1,19 +1,22 @@
-#' Get the table of point attributes
+#' Get the table of point coordinates
 #'
-#' Get tabular information of the attributes of points (incl. coordinates).
-#' @param x the object from which to derive the attribute table.
-#' @param ... subset based on logical predicates defined in terms of the
-#'   columns in \code{x} or a vector of booleans. Multiple conditions are
-#'   combined with \code{&}. Only rows where the condition evaluates to TRUE are kept.
-#' @return A table of the point attributes of \code{x} or an object where the
-#'   point table has been subsetted.
+#' Get tabular information of the point coordinates.
+#' @param x the object from which to derive the point coordinates.
+#' @details This table contains three columns (x, y and fid) and as many rows as
+#'   there are points. In case \code{x} is a polygon, the last point of each
+#'   distinct feature is a duplicate of its first point. In case \code{x} has
+#'   the type 'grid', all layers are summarised into one tibble, as several
+#'   layers must have the same extent and resolution, so that each point occurrs
+#'   in each layer, merely with a different, layer-specific value.
+#' @return A tibble of the point coordinates of \code{x}.
 #' @examples
 #' getPoints(x = gtGeoms$polygon)
 #'
 #' getPoints(x = gtGeoms$point)
 #'
-#' # for a raster object, the @point slot is extracted from its' compact storage
+#' # for raster objects, the @point slot is extracted from its compact form
 #' gtGeoms$grid$continuous@point
+#'
 #' getPoints(x = gtGeoms$grid$continuous)
 #' @family getters
 #' @name getPoints
@@ -26,7 +29,7 @@ NULL
 #' @export
 if(!isGeneric("getPoints")){
   setGeneric(name = "getPoints",
-             def = function(x, ...){
+             def = function(x){
                standardGeneric("getPoints")
              }
   )
@@ -37,7 +40,7 @@ if(!isGeneric("getPoints")){
 #' @export
 setMethod(f = "getPoints",
           signature = "ANY",
-          definition = function(x, ...){
+          definition = function(x){
             NULL
           }
 )
@@ -48,47 +51,22 @@ setMethod(f = "getPoints",
 #' @export
 setMethod(f = "getPoints",
           signature = "geom",
-          definition = function(x, ...){
+          definition = function(x){
 
-            theType <- getType(x = x)[2]
+            theType <- getType(x = x)[1]
 
-            if(length(exprs(...)) > 0){
-              out <- x
-              subset <- enquos(...)
-              isLogical <- tryCatch(is.logical(eval_tidy(expr = subset[[1]])), error = function(e) FALSE)
-              thePoints <- getPoints(x = x)
-              theFeatures <- getFeatures(x = x)
-              theGroups <- getGroups(x = x)
-              if(isLogical){
-                matches <- eval_tidy(expr = subset[[1]])
-              } else {
-                subset <- exprs(...)
-                matches <- eval(parse(text = subset), envir = thePoints)
-              }
-              thePoints <- thePoints[matches,]
-              theFeatures <- theFeatures[theFeatures$fid %in% thePoints$fid,]
-              theGroups <- theGroups[theGroups$gid %in% theFeatures$gid,]
-
-              out <- new(Class = "geom",
-                         type = theType,
-                         point = thePoints,
-                         feature = list(geometry = theFeatures),
-                         group = list(geometry = theGroups),
-                         window = getWindow(x = x),
-                         scale = "absolute",
-                         crs = getCRS(x = x),
-                         history = getHistory(x = x))
+            if(theType == "grid"){
+              # rebuild points
+              xGrid <- seq(from = x@point$x[1], length.out = x@point$x[2], by = x@point$x[3]) + 0.5
+              yGrid <- seq(from = x@point$y[1], length.out = x@point$y[2], by = x@point$y[3]) + 0.5
+              out <- tibble(x = rep(xGrid, times = length(yGrid)),
+                            y = rep(yGrid, each = length(xGrid)),
+                            fid = seq(1:(length(xGrid)*length(yGrid))))
             } else {
-              if(theType == "grid"){
-                # rebuild points
-                xGrid <- seq(from = x@point$x[1], length.out = x@point$x[2], by = x@point$x[3]) + 0.5
-                yGrid <- seq(from = x@point$y[1], length.out = x@point$y[2], by = x@point$y[3]) + 0.5
-                out <- tibble(fid = seq(1:(length(xGrid)*length(yGrid))),
-                              x = rep(xGrid, times = length(yGrid)),
-                              y = rep(yGrid, each = length(xGrid)))
-              } else {
-                out <- x@point
-              }
+              thePoints <- x@point
+              out <- tibble(x = thePoints$x,
+                            y = thePoints$y,
+                            fid = thePoints$fid)
             }
 
             return(out)
@@ -238,19 +216,6 @@ setMethod(f = "getPoints",
             }
 
             return(theCoords)
-          }
-)
-
-# ppp ----
-#' @rdname getPoints
-#' @export
-setMethod(f = "getPoints",
-          signature = "ppp",
-          definition = function(x){
-            temp <- x
-            tibble(x = temp$x,
-                   y = temp$y,
-                   fid = seq_along(temp$x))
           }
 )
 

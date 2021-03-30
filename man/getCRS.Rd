@@ -6,7 +6,6 @@
 \alias{getCRS,geom-method}
 \alias{getCRS,Spatial-method}
 \alias{getCRS,sf-method}
-\alias{getCRS,ppp-method}
 \alias{getCRS,Raster-method}
 \title{Get the coordinate reference system of a spatial object.}
 \usage{
@@ -17,8 +16,6 @@
 \S4method{getCRS}{Spatial}(x)
 
 \S4method{getCRS}{sf}(x)
-
-\S4method{getCRS}{ppp}(x)
 
 \S4method{getCRS}{Raster}(x)
 }
@@ -31,16 +28,27 @@ The coordinate reference system of \code{x} given as proj4string.
 \description{
 Get the coordinate reference system of a spatial object.
 }
+\examples{
+getCRS(x = gtGeoms$grid$continuous)
+
+library(sf)
+nc_sf <- st_read(system.file("shape/nc.shp", package="sf"), quiet = TRUE)
+getCRS(nc_sf)
+
+getCRS(x = gtRasters$categorical)
+}
 \seealso{
 Other getters: 
+\code{\link{getCols}()},
 \code{\link{getExtent}()},
 \code{\link{getFeatures}()},
 \code{\link{getGroups}()},
 \code{\link{getHistory}()},
-\code{\link{getLayer}()},
-\code{\link{getName}()},
+\code{\link{getLayers}()},
+\code{\link{getNames}()},
 \code{\link{getPoints}()},
 \code{\link{getRes}()},
+\code{\link{getRows}()},
 \code{\link{getType}()},
 \code{\link{getWindow}()}
 }

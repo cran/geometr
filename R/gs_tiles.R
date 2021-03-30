@@ -12,27 +12,19 @@
 #' @param centroids [\code{logical(1)}]\cr should the centroids of the tiling be
 #'   returned (\code{TRUE}) or should the tiling be returned (\code{FALSE},
 #'   default)?
-#' @param ... [various]\cr additional arguments; see Details.
 #' @details When deriving a regular tiling for a prescribed window, there is
 #'   only a limited set of legal combinations of cells in x and y dimension. For
 #'   instance, a window of 100 by 100 can't comprise 10 by 5 squares of
-#'   side-length 10, because then the y-dimension wouldn't be fully covered. The
-#'   same is true for hexagonal and triangular tilings. As all tilings are
-#'   regular, the measurement of one dimension is sufficient to specify the
-#'   dimensions of tiles, which is \code{width}.
-#'
-#'   Possible additional arguments are: \itemize{ \item verbose = TRUE/FALSE
-#'   \item graphical parameters to \code{\link{gt_locate}}, in case points are
-#'   sketched; see \code{\link{gpar}}}
-#' @return An invisible \code{geom}.
+#'   side-length/width 10, because then the y-dimension wouldn't be fully covered. The
+#'   same is true for hexagonal and triangular tilings.
+#' @return A \code{geom}.
 #' @family tilings
 #' @examples
 #' # create a squared tiling
-#' library(magrittr)
 #' aWindow <- data.frame(x = c(-180, 180),
 #'                       y = c(-60, 80))
-#' gs_tiles(anchor = aWindow, width = 10) %>%
-#'   visualise(`10° world tiles` = .)
+#' tiles <- gs_tiles(anchor = aWindow, width = 10)
+#' visualise(`10° world tiles` = tiles)
 #'
 #' # create a hexagonal tiling on top of a geom
 #' coords <- data.frame(x = c(40, 70, 70, 50),
@@ -41,8 +33,8 @@
 #'                      y = c(0, 80))
 #' aGeom <- gs_polygon(anchor = coords, window = window)
 #' visualise(`honeycomb background` = aGeom)
-#' gs_tiles(anchor = aGeom, width = 8, pattern = "hexagonal") %>%
-#'   visualise(., linecol = "deeppink", new = FALSE)
+#' hex <- gs_tiles(anchor = aGeom, width = 8, pattern = "hexagonal")
+#' visualise(hex, linecol = "deeppink", new = FALSE)
 #' @importFrom checkmate testDataFrame assertNames testClass testIntegerish
 #'   assertDataFrame assertNames assertCharacter assertSubset assertLogical
 #' @importFrom tibble tibble
@@ -50,10 +42,10 @@
 #' @export
 
 gs_tiles <- function(anchor = NULL, width = NULL, pattern = "squared",
-                     centroids = FALSE, ...){
+                     centroids = FALSE){
 
   # check arguments
-  anchor <- .testAnchor(x = anchor, ...)
+  anchor <- .testAnchor(x = anchor)
   assertIntegerish(x = width, len = 1)
   assertChoice(x = pattern, choices = c("squared", "hexagonal", "triangular"))
   assertLogical(x = centroids)
@@ -164,10 +156,9 @@ gs_tiles <- function(anchor = NULL, width = NULL, pattern = "squared",
   theTiles <- new(Class = "geom",
                   type = theType,
                   point = tibble(fid = retain$fid, x = retain$x, y = retain$y),
-                  feature = list(geometry = theFeatures),
-                  group = list(geometry = theGroups),
+                  feature = theFeatures,
+                  group = theGroups,
                   window = anchor@window,
-                  scale = "absolute",
                   crs = NA_character_,
                   history = list(paste0("tiled geometry of type '", theType, "' was created.")))
 

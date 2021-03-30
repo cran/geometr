@@ -6,20 +6,17 @@
 \alias{getFeatures,geom-method}
 \alias{getFeatures,Spatial-method}
 \alias{getFeatures,sf-method}
-\alias{getFeatures,ppp-method}
 \alias{getFeatures,Raster-method}
 \alias{getFeatures,matrix-method}
 \title{Get the table of feature attributes}
 \usage{
-\S4method{getFeatures}{ANY}(x, ...)
+\S4method{getFeatures}{ANY}(x)
 
-\S4method{getFeatures}{geom}(x, ...)
+\S4method{getFeatures}{geom}(x)
 
-\S4method{getFeatures}{Spatial}(x, ...)
+\S4method{getFeatures}{Spatial}(x)
 
-\S4method{getFeatures}{sf}(x, ...)
-
-\S4method{getFeatures}{ppp}(x, ...)
+\S4method{getFeatures}{sf}(x)
 
 \S4method{getFeatures}{Raster}(x)
 
@@ -27,37 +24,37 @@
 }
 \arguments{
 \item{x}{the object from which to derive the attribute table.}
-
-\item{...}{subset based on logical predicates defined in terms of the
-columns in \code{x} or a vector of booleans. Multiple conditions are
-combined with \code{&}. Only rows where the condition evaluates to TRUE are kept.}
 }
 \value{
-A table of the feature attributes of \code{x} or an object where the
-  features table has been subsetted.
+A tibble (or a list of tibbles per layer) of the feature attributes
+  of \code{x}.
 }
 \description{
 Get tabular information of the attributes of features.
 }
+\details{
+This table contains at least the column 'fid'. In case \code{x} has
+  any typ other than 'grid', it contains also the column 'gid' and in case it
+  has type 'grid', it also contains the column 'values'.
+}
 \examples{
 getFeatures(x = gtGeoms$polygon)
 
-# get a subset of an sf-object
-getFeatures(x = gtSF$multilinestring, a == 1)
+getFeatures(x = gtRasters)
 
-# get the values of a RasterLayer
-getFeatures(x = gtRasters$continuous)
 }
 \seealso{
 Other getters: 
 \code{\link{getCRS}()},
+\code{\link{getCols}()},
 \code{\link{getExtent}()},
 \code{\link{getGroups}()},
 \code{\link{getHistory}()},
-\code{\link{getLayer}()},
-\code{\link{getName}()},
+\code{\link{getLayers}()},
+\code{\link{getNames}()},
 \code{\link{getPoints}()},
 \code{\link{getRes}()},
+\code{\link{getRows}()},
 \code{\link{getType}()},
 \code{\link{getWindow}()}
 }

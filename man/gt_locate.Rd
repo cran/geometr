@@ -48,17 +48,32 @@ A \code{tibble} of the selected locations and, if \code{identify
 Click into a plot to get the location or identify values
 }
 \examples{
-\donttest{
-# locate coordinates with geoms
-visualise(geom = gtGeoms$polygon)
-gt_locate(samples = 2)
+if(dev.interactive()){
 
-# locate or identify values with rasters
-visualise(raster = gtRasters$continuous)
-gt_locate(identify = TRUE, snap = TRUE)
+  # locate coordinates with geoms
+  visualise(geom = gtGeoms$polygon)
+  gt_locate(samples = 2)
 
-# with several panels, specify a target
-visualise(gtRasters)
-gt_locate(samples = 4, panel = "categorical", snap = TRUE, identify = TRUE)
+  # locate or identify values with rasters
+  visualise(raster = gtRasters$continuous)
+  gt_locate(identify = TRUE, snap = TRUE)
+
+  # with several panels, specify a target
+  visualise(gtRasters)
+  gt_locate(samples = 4, panel = "categorical",
+            snap = TRUE, identify = TRUE)
+
 }
 }
+\seealso{
+Other geometry tools: 
+\code{\link{gt_filter}()},
+\code{\link{gt_pull}()},
+\code{\link{gt_reflect}()},
+\code{\link{gt_rotate}()},
+\code{\link{gt_scale}()},
+\code{\link{gt_skew}()},
+\code{\link{gt_stretch}()},
+\code{\link{gt_translate}()}
+}
+\concept{geometry tools}

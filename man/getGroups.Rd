@@ -5,48 +5,50 @@
 \alias{getGroups,ANY-method}
 \alias{getGroups,geom-method}
 \alias{getGroups,Raster-method}
-\alias{getGroups,matrix-method}
 \title{Get the table of group attributes}
 \usage{
-\S4method{getGroups}{ANY}(x, ...)
+\S4method{getGroups}{ANY}(x)
 
-\S4method{getGroups}{geom}(x, ...)
+\S4method{getGroups}{geom}(x)
 
 \S4method{getGroups}{Raster}(x)
-
-\S4method{getGroups}{matrix}(x)
 }
 \arguments{
 \item{x}{the object from which to derive the attribute table.}
-
-\item{...}{subset based on logical predicates defined in terms of the
-columns in \code{x} or a vector of booleans. Multiple conditions are
-combined with \code{&}. Only rows where the condition evaluates to TRUE are kept.}
 }
 \value{
-A table of the group attributes of \code{x} or an object where the
-  groups table has been subsetted.
+A tibble (or a list of tibbles per layer) of the group attributes of
+  \code{x}.
 }
 \description{
-Get tabular information of the attributes of groups of features.
+Get the table of group attributes
+}
+\details{
+This table contains at least the column 'gid'.
+
+  When this function is called on "ANY" object, it is first tested whether
+  that object has features (\code{\link{getFeatures}}), from which the groups
+  can be reconstructed. If this is not the case, \code{NULL} is returned.
 }
 \examples{
 getGroups(x = gtGeoms$polygon)
 
 # for raster objects, groups are pixels with the same value and their
 # attributes are in the raster attribute table (RAT)
-getGroups(x = gtRasters$categorical)
+getGroups(x = gtRasters)
 }
 \seealso{
 Other getters: 
 \code{\link{getCRS}()},
+\code{\link{getCols}()},
 \code{\link{getExtent}()},
 \code{\link{getFeatures}()},
 \code{\link{getHistory}()},
-\code{\link{getLayer}()},
-\code{\link{getName}()},
+\code{\link{getLayers}()},
+\code{\link{getNames}()},
 \code{\link{getPoints}()},
 \code{\link{getRes}()},
+\code{\link{getRows}()},
 \code{\link{getType}()},
 \code{\link{getWindow}()}
 }

@@ -13,8 +13,7 @@ setTheme(
   grid = NULL,
   legend = NULL,
   scale = NULL,
-  vector = NULL,
-  raster = NULL
+  parameters = NULL
 )
 }
 \arguments{
@@ -49,21 +48,21 @@ grid and whether or not to plot the \code{minor = TRUE/FALSE} grid.}
 
 \item{legend}{[\code{named list(.)}]\cr \code{plot = TRUE/FALSE}, number of
 \code{bins}, \code{ascending = TRUE/FALSE} order of values and the
-\code{sizeRatio} of plot and legend, \cr\cr label [\code{named list(.)}]\cr
-\code{plot = TRUE/FALSE}, \code{fontsize} and \code{colour} of the legend
-labels, \cr\cr box [\code{named list(.)}]\cr \code{plot = TRUE/FALSE},
-\code{linetype}, \code{linewidth} and \code{colour} of the legend box.}
+\code{sizeRatio} of legend/plot size, \cr\cr label [\code{named
+list(.)}]\cr \code{plot = TRUE/FALSE}, \code{fontsize} and \code{colour} of
+the legend labels, \cr\cr box [\code{named list(.)}]\cr \code{plot =
+TRUE/FALSE}, \code{linetype}, \code{linewidth} and \code{colour} of the
+legend box.}
 
 \item{scale}{[\code{named list(.)}]\cr \code{param = 'someParameter'} and
-\code{to = 'someAttribute'} to which to scale 'someParameter' to. Whether
-or not to use the values' \code{identity}, the value \code{range} that
-shall be represented by the scale and the number of \code{bins}.}
+\code{to = 'someAttribute'} specifying which parameter shall be scale to
+which attribute, the value \code{range} that shall be represented by the
+scale, the number of \code{bins} into which the values shall be classified
+and the number of \code{maxPixels}.}
 
-\item{vector}{[\code{named list(.)}]\cr \code{linecol}, \code{fillcol},
+\item{parameters}{[\code{named list(.)}]\cr \code{linecol}, \code{fillcol},
 \code{missingcol}, \code{linetype}, \code{linewidth}, \code{pointsize} and
-\code{pointsymbol} of a vector object.}
-
-\item{raster}{[ \code{named list(.)}]\cr \code{fillcol} of a raster object.}
+\code{pointsymbol} of the plot object.}
 }
 \description{
 Assign parameters in a gtTheme to create a new theme.

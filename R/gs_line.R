@@ -8,21 +8,19 @@
 #' @param window [\code{data.frame(1)}]\cr in case the reference window deviates
 #'   from the bounding box of \code{anchor} (minimum and maximum values),
 #'   specify this here.
-#' @param sketch [\code{raster(1)}]\cr raster object that serves as template to
-#'   sketch polygons.
 #' @param features [\code{integerish(1)}]\cr number of lines to create.
 #' @param vertices [\code{integerish(.)}]\cr number of vertices per line; will
 #'   be recycled if it does not have as many elements as specified in
 #'   \code{features}.
 #' @param ... [various]\cr graphical parameters to \code{\link{gt_locate}}, in
 #'   case points are sketched; see \code{\link[grid]{gpar}}
-#' @return An invisible \code{geom}.
+#' @return A \code{geom}.
 #' @family geometry shapes
-#' @details The arguments \code{anchor} and \code{sketch} indicate how the line
-#'   is created: \itemize{ \item if \code{anchor} is set, the line is created
-#'   parametrically from the given objects' points, \item if an object is set in
-#'   \code{sketch}, this is used to create the \code{geom} interactively, by
-#'   clicking into the plot.}
+#' @details The argument \code{anchor} indicates how the geom is created:
+#'   \itemize{ \item if \code{anchor} is set, the geom is created parametrically
+#'   from the points given in \code{anchor}, \item if it is not set either
+#'   \code{window} or a default window between 0 and 1 is opened to sketch the
+#'   geom.}
 #' @examples
 #' # 1. create a line programmatically
 #' coords <- data.frame(x = c(40, 70, 70, 50),
@@ -32,20 +30,20 @@
 #' (aGeom <- gs_line(anchor = coords))
 #'
 #' # the vertices are plottet relative to the window
-#' library(magrittr)
 #' window <- data.frame(x = c(0, 80),
 #'                      y = c(0, 80))
-#' gs_line(anchor = coords, window = window) %>%
-#'   visualise(linecol = "green")
+#' aLine <- gs_line(anchor = coords, window = window)
+#' visualise(aLine, linecol = "green")
 #'
 #' # when a geom is used in 'anchor', its properties are passed on
 #' aGeom <- setWindow(x = aGeom, to = window)
-#' gs_line(anchor = aGeom) %>%
-#'   visualise(linecol = "deeppink")
-#' \donttest{
-#' # 2. sketch a line by clicking into a template
-#' gs_line(sketch = gtRasters$continuous, vertices = 4) %>%
-#'   visualise(linecol = "orange", linewidth = 5, new = FALSE)
+#' aLine <- gs_line(anchor = aGeom)
+#' visualise(aLine, linecol = "deeppink")
+#'
+#' # 2. sketch a line
+#' if(dev.interactive()){
+#'   aLine <- gs_line(vertices = 4)
+#'   visualise(aLine, linecol = "orange", linewidth = 5, new = FALSE)
 #' }
 #' @importFrom checkmate testDataFrame assertNames testClass testNull
 #'   assertDataFrame assert assertIntegerish
@@ -53,8 +51,7 @@
 #' @importFrom tibble tibble
 #' @export
 
-gs_line <- function(anchor = NULL, window = NULL, features = 1, vertices = NULL,
-                    sketch = NULL, ...){
+gs_line <- function(anchor = NULL, window = NULL, features = 1, vertices = 2, ...){
 
   # check arguments
   anchor <- .testAnchor(x = anchor)
@@ -62,13 +59,14 @@ gs_line <- function(anchor = NULL, window = NULL, features = 1, vertices = NULL,
   assertIntegerish(features, len = 1, lower = 1)
   assertIntegerish(vertices, min.len = 1, lower = 2, any.missing = FALSE, null.ok = TRUE)
 
-  if(is.null(anchor) & is.null(sketch)){
-    stop("please provide anchor values.")
-  }
   if(!is.null(anchor)){
     if(anchor$type == "geom"){
       hist <- paste0("object was cast to 'line' geom.")
-      features <- length(unique(anchor$obj@feature$geometry$fid))
+      if(getType(x = anchor$obj)[1] == "point"){
+        features <- length(unique(anchor$obj@feature$gid))
+      } else {
+        features <- length(unique(anchor$obj@feature$fid))
+      }
       projection <- getCRS(x = anchor$obj)
     } else if(anchor$type == "df"){
       hist <- paste0("object was created as 'line' geom.")
@@ -79,63 +77,106 @@ gs_line <- function(anchor = NULL, window = NULL, features = 1, vertices = NULL,
     }
   }
 
-  # sketch the geometry
-  if(!is.null(sketch)){
-    hist <- paste0("object was sketched as 'line' geom.")
+  # recycle vertices to match the number of features
+  if(length(vertices) != features){
+    vertices <- rep(vertices, length.out = features)
+  }
 
-    template <- .testTemplate(x = sketch, ...)
-    theGeom <- gt_sketch(template = template$obj,
-                         shape = "line",
-                         features = features,
-                         vertices = vertices,
-                         ...)
+  theVertices <- theFeatures <- theGroups <- NULL
+  for(i in 1:features){
 
-  } else {
-
-    theVertices <- theFeatures <- theGroups <- NULL
-    for(i in 1:features){
+    if(!is.null(anchor)){
 
       if(anchor$type == "geom"){
+
+        hist <- paste0("object was cast to 'line' geom.")
+        theHistory <- c(getHistory(x = anchor$obj), list(hist))
+
         if(is.null(theWindow)){
           theWindow <- anchor$obj@window
         }
-        tempAnchor <- anchor$obj@point[anchor$obj@point$fid == i,]
-        if(dim(tempAnchor)[1] < 2){
+
+        if(getType(x = anchor$obj)[1] == "point"){
+          tempAnchor <- gt_filter(obj = anchor$obj, gid == !!i)
+        } else {
+          tempAnchor <- gt_filter(obj = anchor$obj, gid == !!i)
+        }
+        tempPoints <- getPoints(tempAnchor)
+        tempFeatures <- getFeatures(tempAnchor)
+        tempGroups <- getGroups(tempAnchor)
+
+        tempPoints <- left_join(tempPoints, tempFeatures, by = "fid")
+        tempPoints <- select(mutate(tempPoints, fid = gid), -gid)
+
+        if(dim(tempAnchor@point)[1] < 2){
           stop(paste0("a line geom must have at least 2 points per 'fid'."))
         }
-        tempFeatures <- anchor$obj@feature$geometry[anchor$obj@feature$geometry$fid == i,]
-        tempGroups <- anchor$obj@group$geometry[anchor$obj@group$geometry$gid == i,]
       } else if(anchor$type == "df"){
+
+        theHistory <- list(paste0("object was created as 'line' geom."))
+
         if(is.null(theWindow)){
-          theWindow = tibble(x = c(min(anchor$obj$x), max(anchor$obj$x), max(anchor$obj$x), min(anchor$obj$x), min(anchor$obj$x)),
-                             y = c(min(anchor$obj$y), min(anchor$obj$y), max(anchor$obj$y), max(anchor$obj$y), min(anchor$obj$y)))
+          theWindow = tibble(x = c(min(anchor$obj$x), max(anchor$obj$x)),
+                             y = c(min(anchor$obj$y), max(anchor$obj$y)))
         }
         if("fid" %in% names(anchor$obj)){
-          tempAnchor <- anchor$obj[anchor$obj$fid == i, ]
+          tempPoints <- anchor$obj[anchor$obj$fid == i, ]
         } else {
-          tempAnchor <- anchor$obj
-          tempAnchor <- bind_cols(tempAnchor, fid = rep(1, length.out = length(anchor$obj$x)))
+          tempPoints <- anchor$obj
+          tempPoints <- bind_cols(tempPoints, fid = rep(1, length.out = length(anchor$obj$x)))
         }
         tempFeatures <- tibble(fid = i, gid = i)
         tempGroups <- tibble(gid = i)
       }
-      theNodes <- tempAnchor[c("x", "y", "fid")]
-      theVertices <- bind_rows(theVertices, theNodes)
-      theFeatures <- bind_rows(theFeatures, tempFeatures)
-      theGroups <- bind_rows(theGroups, tempGroups)
+
+    } else {
+
+      clicks <- vertices[i]
+
+      theHistory <- list(paste0("object was created as 'polygon' geom."))
+
+      # first, ensure that a plot is available, otherwise make one
+      if(is.null(dev.list())){
+        if(is.null(theWindow)){
+          theWindow <- tibble(x = c(0, 1), y = c(0, 1))
+        }
+        visualise(window = theWindow)
+      } else {
+        extentGrobMeta <- grid.get(gPath("extentGrob"))
+        theWindow <- tibble(x = c(0, as.numeric(extentGrobMeta$width)) + as.numeric(extentGrobMeta$x),
+                            y = c(0, as.numeric(extentGrobMeta$height)) + as.numeric(extentGrobMeta$y))
+      }
+      message(paste0("please click ", clicks, " vertices."))
+      tempAnchor <- gt_locate(samples = clicks)
+      tempAnchor <- .testPoints(x = tempAnchor)
+      if(is.null(tempAnchor)){
+        tempAnchor <- gs_random(type = "line", vertices = vertices)
+        tempAnchor <- tempAnchor@point
+      }
+
+      tempPoints <- tibble(fid = i, x = tempAnchor$x, y = tempAnchor$y)
+      tempFeatures = tibble(fid = i, gid = 1)
+      tempGroups = tibble(gid = 1)
+
+      projection <- NA
 
     }
 
-    theGeom <- new(Class = "geom",
-                   type = "line",
-                   point = theVertices,
-                   feature = list(geometry = theFeatures),
-                   group = list(geometry = theGroups),
-                   window = theWindow,
-                   scale = "absolute",
-                   crs = as.character(projection),
-                   history = c(getHistory(x = anchor$obj), list(hist)))
+    theNodes <- tempPoints[c("x", "y", "fid")]
+    theVertices <- bind_rows(theVertices, theNodes)
+    theFeatures <- bind_rows(theFeatures, tempFeatures)
+    theGroups <- bind_rows(theGroups, tempGroups)
+
   }
+
+  theGeom <- new(Class = "geom",
+                 type = "line",
+                 point = theVertices,
+                 feature = theFeatures,
+                 group = theGroups,
+                 window = theWindow,
+                 crs = as.character(projection),
+                 history = theHistory)
 
   invisible(theGeom)
 }
