@@ -2,12 +2,12 @@
 #'
 #' Translate geometric objects by adding a constant in x and y dimension.
 #' @param obj [\code{geometric object(1)}]\cr the object to translate.
-#' @param x [\code{numeric(1)}]\cr the translation constant (offset) in
-#'   x dimension.
-#' @param y [\code{numeric(1)}]\cr the translation constant (offset) in
-#'   y dimension.
-#' @param fid [\code{integerish(.)}]\cr if only a subset of features shall be
-#'   translated, specify that here.
+#' @param x [\code{numeric(1)}]\cr the translation constant (offset) in x
+#'   dimension.
+#' @param y [\code{numeric(1)}]\cr the translation constant (offset) in y
+#'   dimension.
+#' @param fid [\code{integerish(.)}]\cr in case only a subset of features shall
+#'   be translated, specify that here.
 #' @param update [\code{logical(1)}]\cr whether or not to update the window slot
 #'   after translation.
 #' @return \code{geom} of the mathematically translated \code{obj}.
@@ -34,7 +34,7 @@ gt_translate <- function(obj, x = NULL, y = NULL, fid = NULL, update = TRUE){
 
   assertNumeric(x, any.missing = FALSE, min.len = 1, null.ok = TRUE)
   assertNumeric(y, any.missing = FALSE, min.len = 1, null.ok = TRUE)
-  assertIntegerish(x = fid, any.missing = FALSE, null.ok = TRUE)
+  assertNumeric(x = fid, lower = 1, finite = TRUE, any.missing = FALSE, null.ok = TRUE)
   assertLogical(x = update, len = 1, any.missing = FALSE)
 
   theFeatures <- getFeatures(x = obj)

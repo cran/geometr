@@ -1,3 +1,14 @@
+# geometr 0.3.0 - fast visuals
+
+- revise `visualise` and all its' helpers to make plotting way faster.
+- fix a bug that would not allow zooming
+
+
+# geoemtr 0.2.9
+
+- revise documentation of `setTheme` in an effort to make it more accessible.
+- include rounding of legend tick labels
+
 # geometr 0.2.8
 
 - `gs_point` now allows to create an empty geom that contains only "window" information.

@@ -29,7 +29,6 @@ library(raster)
 library(geometr)
 library(tibble)
 library(dplyr)
-library(readr)
 library(magrittr)
 getExtent(x = st_read(system.file("shape/nc.shp", package="sf")))
 ```
@@ -56,7 +55,6 @@ library(raster)
 library(geometr)
 library(tibble)
 library(dplyr)
-library(readr)
 library(magrittr)
 ```
 
@@ -226,7 +224,7 @@ The function `gs_polygon()` ensures that a polygon fulfills the formal criteria 
 Moreover, polygons may have holes (and islands therein), for example a park with a pond that has a little island in the middle.
 When defining polygon `geom`s with nested closed paths (holes), the only thing to consider is that the outer path must be given as first ring and that this outer ring must fully enclose all interior rings.
 All paths that are supposed to be nested within this path must themselves be closed, but their order does not matter.
-Also, when building a polygon with hole in `geometr`, the rotation direction described by the sequence of the points does not matter, in contrast to other spatial classes to date.
+Also, when building a polygon with hole in `geometr`, the rotation direction described by the sequence of the points does not matter, in contrast to other spatial classes to date. *mention here that this is a requirement of algorithms that are generally used, even though they are outdated...)*
 The correct treatment and visualisation of polygons with interior rings is determined by the code-logic of the functions processing polygons.
 
 ```{r}
@@ -262,14 +260,11 @@ getGroups(x = new_geom)
 ```
 
 It becomes clear that this approach to attribute tables makes the class `geom` quite flexible.
-One could for example assign some point specific measurements (such as [Arne Pommerening's](http://www.pommerening.org) Clocaenog 6 sample data) to the feature attribute table, and at the same time set group specific attributes to the group attribute table of a point `geom`.
+One could for example assign some point specific measurements (such as [Arne Pommerening's](https://www.pommerening.org) Clocaenog 6 sample data) to the feature attribute table, and at the same time set group specific attributes to the group attribute table of a point `geom`.
 
 ```{r}
-clg_dat <- read_delim(file = "http://www.pommerening.org/wiki/images/d/dc/Clg6.txt", 
-                        delim = "\t", col_types = "iiidddd")
-clg_spec <- read_delim(file = "http://www.pommerening.org/wiki/images/d/df/Clg6.species",
-                       delim = "\t", col_types = "icccc") %>% 
-  mutate_if(is.character, trimws)
+clg_dat <- clocaenog$trees
+clg_spec <- clocaenog$species
 
 # make table of locations, tree properties and species metadata
 locations <- tibble(x = clg_dat$x,

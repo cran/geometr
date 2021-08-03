@@ -4,8 +4,8 @@
 #' @param obj [\code{geometric object(1)}]\cr the object to reflect.
 #' @param angle [\code{numeric(1)}]\cr the counter-clockwise angle by which the
 #'   reflection axis shall be rotated (can be negative to rotate clockwise).
-#' @param fid [\code{integerish(.)}]\cr if only a subset of features shall be
-#'   rotated, specify that here.
+#' @param fid [\code{integerish(.)}]\cr in case only a subset of features shall
+#'   be rotated, specify that here.
 #' @param update [\code{logical(1)}]\cr whether or not to update the window slot
 #'   after rotation.
 #' @details The reflection axis is a straight line that goes through the plot
@@ -33,7 +33,7 @@
 gt_reflect <- function(obj, angle, fid = NULL, update = TRUE){
 
   assertNumeric(x = angle, any.missing = FALSE, lower = -360, upper = 360, min.len = 1)
-  assertIntegerish(x = fid, any.missing = FALSE, null.ok = TRUE)
+  assertNumeric(x = fid, lower = 1, finite = TRUE, any.missing = FALSE, null.ok = TRUE)
   assertLogical(x = update, len = 1, any.missing = FALSE)
 
   theFeatures <- getFeatures(x = obj)

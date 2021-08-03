@@ -4,8 +4,8 @@
 #' @param obj [\code{geometric object(1)}]\cr the object to stretch.
 #' @param x [\code{numeric(1)}]\cr the scale factor in x dimension.
 #' @param y [\code{numeric(1)}]\cr the scale factor in y dimension.
-#' @param fid [\code{integerish(.)}]\cr if only a subset of features shall be
-#'   stretched, specify that here.
+#' @param fid [\code{integerish(.)}]\cr in case only a subset of features shall
+#'   be stretched, specify that here.
 #' @param update [\code{logical(1)}]\cr whether or not to update the window slot
 #'   after stretching.
 #' @return \code{geom} of the stretched \code{obj}.
@@ -38,7 +38,7 @@ gt_stretch <- function(obj, x = NULL, y = NULL, fid = NULL, update = TRUE){
 
   assertNumeric(x, any.missing = FALSE, min.len = 1, null.ok = TRUE)
   assertNumeric(y, any.missing = FALSE, min.len = 1, null.ok = TRUE)
-  assertIntegerish(x = fid, any.missing = FALSE, null.ok = TRUE)
+  assertNumeric(x = fid, lower = 1, finite = TRUE, any.missing = FALSE, null.ok = TRUE)
   assertLogical(x = update, len = 1, any.missing = FALSE)
 
   theFeatures <- getFeatures(x = obj)

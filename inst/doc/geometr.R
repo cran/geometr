@@ -10,7 +10,6 @@ library(raster)
 library(geometr)
 library(tibble)
 library(dplyr)
-library(readr)
 library(magrittr)
 getExtent(x = st_read(system.file("shape/nc.shp", package="sf")))
 
@@ -21,7 +20,6 @@ getExtent(x = st_read(system.file("shape/nc.shp", package="sf")))
 #  library(geometr)
 #  library(tibble)
 #  library(dplyr)
-#  library(readr)
 #  library(magrittr)
 
 ## -----------------------------------------------------------------------------
@@ -93,11 +91,8 @@ getFeatures(x = new_geom)
 getGroups(x = new_geom)
 
 ## -----------------------------------------------------------------------------
-clg_dat <- read_delim(file = "http://www.pommerening.org/wiki/images/d/dc/Clg6.txt", 
-                        delim = "\t", col_types = "iiidddd")
-clg_spec <- read_delim(file = "http://www.pommerening.org/wiki/images/d/df/Clg6.species",
-                       delim = "\t", col_types = "icccc") %>% 
-  mutate_if(is.character, trimws)
+clg_dat <- clocaenog$trees
+clg_spec <- clocaenog$species
 
 # make table of locations, tree properties and species metadata
 locations <- tibble(x = clg_dat$x,

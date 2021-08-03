@@ -4,12 +4,12 @@
 #' @param obj [\code{geometric object(1)}]\cr the object to rotate.
 #' @param x [\code{numeric(1)}]\cr the x position(s) to rotate about.
 #' @param y [\code{numeric(1)}]\cr the y position(s) to rotate about.
-#' @param angle [\code{numeric(1)}]\cr the counter-clockwise angle by which
-#'   \code{geom} shall be rotated (can be negative to rotate clockwise).
-#' @param fid [\code{integerish(.)}]\cr if only a subset of features shall be
-#'   rotated, specify that here.
+#' @param angle [\code{numeric(1)}]\cr the counter-clockwise angle(s) by which
+#'   \code{obj} shall be rotated (can be negative to rotate clockwise).
+#' @param fid [\code{integerish(.)}]\cr in case only a subset of features shall
+#'   be rotated, specify that here.
 #' @param update [\code{logical(1)}]\cr whether or not to update the window slot
-#'   after rotation.
+#'   of the resulting geom.
 #' @return \code{geom} of the rotated \code{obj}.
 #' @family geometry tools
 #' @examples
@@ -44,7 +44,7 @@ gt_rotate <- function(obj, x = NULL, y = NULL, angle = NULL, fid = NULL,
   assertNumeric(x = x, any.missing = FALSE, min.len = 1, null.ok = TRUE)
   assertNumeric(x = y, any.missing = FALSE, min.len = 1, null.ok = TRUE)
   assertNumeric(angle, any.missing = FALSE, lower = -360, upper = 360, min.len = 1)
-  assertIntegerish(x = fid, any.missing = FALSE, null.ok = TRUE)
+  assertNumeric(x = fid, lower = 1, finite = TRUE, any.missing = FALSE, null.ok = TRUE)
   assertLogical(x = update, len = 1, any.missing = FALSE)
 
   theFeatures <- getFeatures(x = obj)

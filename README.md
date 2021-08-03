@@ -3,14 +3,15 @@
 
 # geometr <a href='https://ehrmanns.github.io/geometr/'><img src='man/figures/logo.svg' align="right" height="200" /></a>
 
-[![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/geometr)](https://cran.r-project.org/package=geometr)
-[![Travis-CI Build
-Status](https://travis-ci.org/EhrmannS/geometr.svg?branch=master)](https://travis-ci.org/EhrmannS/geometr)
-[![AppVeyor build
-status](https://ci.appveyor.com/api/projects/status/github/EhrmannS/geometr?branch=master&svg=true)](https://ci.appveyor.com/project/EhrmannS/geometr)
+<!-- badges: start -->
+
+[![R-CMD-check](https://github.com/EhrmannS/geometr/workflows/R-CMD-check/badge.svg)](https://github.com/EhrmannS/geometr/actions)
 [![Coverage
-Status](https://img.shields.io/codecov/c/github/EhrmannS/geometr/master.svg)](https://codecov.io/github/EhrmannS/geometr?branch=master)
+Status](https://codecov.io/gh/EhrmannS/geometr/branch/master/graph/badge.svg)](https://codecov.io/github/EhrmannS/geometr?branch=master)
+[![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/geometr)](https://cran.r-project.org/package=geometr)
 [![](http://cranlogs.r-pkg.org/badges/grand-total/geometr)](https://cran.r-project.org/package=geometr)
+
+<!-- badges: end -->
 
 ## Overview
 
@@ -73,14 +74,14 @@ and the same arrangement).
 
 ``` r
 getExtent(x = nc_geom)
-#> # A tibble: 2 x 2
+#> # A tibble: 2 × 2
 #>       x     y
 #>   <dbl> <dbl>
 #> 1 -84.3  33.9
 #> 2 -75.5  36.6
 
 getFeatures(x = nc_geom)
-#> # A tibble: 108 x 16
+#> # A tibble: 108 × 16
 #>      fid   gid  AREA PERIMETER CNTY_ CNTY_ID NAME    FIPS  FIPSNO CRESS_ID BIR74
 #>  * <int> <int> <dbl>     <dbl> <dbl>   <dbl> <fct>   <fct>  <dbl>    <int> <dbl>
 #>  1     1     1 0.114      1.44  1825    1825 Ashe    37009  37009        5  1091
@@ -126,14 +127,14 @@ nc_geom <- gc_geom(input = nc_sf, group = TRUE)
 currituck <- gt_filter(obj = nc_geom, gid == 4)
 
 getFeatures(x = currituck)
-#> # A tibble: 3 x 2
+#> # A tibble: 3 × 2
 #>     fid   gid
 #>   <int> <int>
 #> 1     4     4
 #> 2     5     4
 #> 3     6     4
 getGroups(x = currituck)
-#> # A tibble: 1 x 15
+#> # A tibble: 1 × 15
 #>     gid  AREA PERIMETER CNTY_ CNTY_ID NAME     FIPS  FIPSNO CRESS_ID BIR74 SID74
 #>   <int> <dbl>     <dbl> <dbl>   <dbl> <fct>    <fct>  <dbl>    <int> <dbl> <dbl>
 #> 1     4  0.07      2.97  1831    1831 Curritu… 37053  37053       27   508     1

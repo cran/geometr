@@ -1,14 +1,15 @@
 #' Make the legend of a plot
 #'
-#' @param x [\code{list(1)}]\cr any spatial object to plot.
-#' @param plotParams [\code{named list(.)}]\cr new plotting parameters specified
+#' @param x any spatial object to plot.
+#' @param scaleValues the scale values.
+#' @param plotParams new plotting parameters specified
 #'   via the quick options in \code{\link{visualise}}.
-#' @param theme [\code{list(7)}]\cr the theme from which to take graphical
+#' @param theme the theme from which to take graphical
 #'   parameters.
 #' @importFrom checkmate assertChoice
 #' @importFrom grid textGrob rasterGrob rectGrob gpar gTree gList unit
 
-.makeLegend <- function(x, plotParams, theme){
+.makeLegend <- function(x, scaleValues, plotParams, theme){
 
   if(theme@legend$plot){
 
@@ -23,7 +24,11 @@
       theParam <- names(plotParams)[i]
       theVar <- plotParams[[i]]
 
-      allLabels <- suppressMessages(sort(gt_pull(obj = x, var = theVar)))
+      if(i == 1){
+        allLabels <- scaleValues
+      } else {
+        allLabels <- suppressMessages(sort(gt_pull(obj = x, var = theVar)))
+      }
 
       if(!is.null(theme@scale$bins)){
         thebins <- theme@scale$bins
@@ -137,6 +142,11 @@
       if(theme@legend$label$plot){
         thePositions <- tickPositions / max(tickPositions)
         thePositions <- (tickPositions-1) / max(tickPositions) + thePositions[1]/2
+
+        if(is.numeric(legendLabels)){
+          legendLabels <- format(legendLabels, digits = theme@legend$digits+1)
+        }
+
         legend_labels <- textGrob(label = legendLabels,
                                   x = unit(0, "npc") + unit(20, "points") + prevX,
                                   y = unit(thePositions, "npc"),
