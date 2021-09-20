@@ -63,8 +63,9 @@ visualise <- function(...,
                       clip = TRUE,
                       theme = gtTheme){
 
-  # library(geometr); library(checkmate); library(grid); library(rlang); library(tibble); library(dplyr)
-  # window = NULL; theme = gtTheme; trace = FALSE; new = T; clip = FALSE; plotParams <- list(linecol = "height")
+  # library(geometr); library(checkmate); library(grid); library(rlang); library(tibble); library(dplyr); library(purrr)
+  # window = NULL; theme = gtTheme; trace = FALSE; new = T; clip = FALSE;
+  # objs <- list(something = perforatedPoly); plotParams <- list(fillcol = "fid")
   # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/makePlot.R')
   # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/makeGrob.R')
   # source('/media/se87kuhe/external1/projekte/r-dev/geometr/R/makeLayout.R')
